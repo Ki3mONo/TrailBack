@@ -22,7 +22,7 @@ type Photo = {
     uploaded_at: string;
 };
 
-export default function MemoriesList() {
+export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
     const [memories, setMemories] = useState<Memory[]>([]);
     const [selected, setSelected] = useState<Memory | null>(null);
     const [photos, setPhotos] = useState<Photo[]>([]);
@@ -64,7 +64,7 @@ export default function MemoriesList() {
 
     return (
         <div className="fade-in space-y-6 relative">
-            {/* Modal */}
+            {/* Modal zdjęcia */}
             {previewUrl && (
                 <ImageModal
                     url={previewUrl}
@@ -91,7 +91,13 @@ export default function MemoriesList() {
                                 style={{ height: "200px" }}
                                 className="rounded border"
                             >
-                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                <TileLayer
+                                    url={
+                                        darkMode
+                                            ? "https://tiles.stadiamaps.com/tiles/alidade_dark/{z}/{x}/{y}{r}.png"
+                                            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    }
+                                />
                                 <Marker position={[selected.lat, selected.lng]} />
                             </MapContainer>
 
@@ -113,7 +119,10 @@ export default function MemoriesList() {
                                 ))}
                             </div>
 
-                            <button onClick={() => setSelected(null)} className="btn-outline mt-4 w-full">
+                            <button
+                                onClick={() => setSelected(null)}
+                                className="btn-outline mt-4 w-full"
+                            >
                                 ← Wróć do listy
                             </button>
                         </div>
@@ -129,12 +138,16 @@ export default function MemoriesList() {
                                     className="memory-item cursor-pointer hover:shadow-xl transition"
                                     onClick={() => openMemory(memory)}
                                 >
-                                    <h3 className="text-lg font-semibold text-blue-700">{memory.title}</h3>
+                                    <h3 className="text-lg font-semibold text-blue-700">
+                                        {memory.title}
+                                    </h3>
                                     <p className="text-sm text-gray-600 mt-1">
                                         📍 {memory.lat.toFixed(4)}, {memory.lng.toFixed(4)}
                                     </p>
                                     <p className="text-xs text-gray-400 mt-2">
-                                        {memory.created_at ? new Date(memory.created_at).toLocaleString() : "?"}
+                                        {memory.created_at
+                                            ? new Date(memory.created_at).toLocaleString()
+                                            : "?"}
                                     </p>
                                 </li>
                             ))}

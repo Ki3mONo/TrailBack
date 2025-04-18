@@ -1,9 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import LocationPicker from "./LocationPicker";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
 
-export default function MapForm() {
+export default function MapForm({ darkMode }: { darkMode: boolean }) {
     const [position, setPosition] = useState<[number, number] | null>(null);
     const [title, setTitle] = useState("");
     const [desc, setDesc] = useState("");
@@ -13,9 +13,9 @@ export default function MapForm() {
     const titleRef = useRef<HTMLInputElement>(null);
 
     // Autofocus na tytule po renderze
-    useState(() => {
+    useEffect(() => {
         setTimeout(() => titleRef.current?.focus(), 300);
-    });
+    }, []);
 
     const handleSubmit = async () => {
         if (isSubmitting) return;
@@ -114,7 +114,13 @@ export default function MapForm() {
 
             <div className="card p-0 overflow-hidden">
                 <MapContainer center={[51.1079, 17.0385]} zoom={13} className="leaflet-container">
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <TileLayer
+                        url={
+                            darkMode
+                                ? "https://tiles.stadiamaps.com/tiles/alidade_dark/{z}/{x}/{y}{r}.png"
+                                : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        }
+                    />
                     <LocationPicker onSelect={(lat, lng) => setPosition([lat, lng])} />
                     {position && <Marker position={position} />}
                 </MapContainer>
