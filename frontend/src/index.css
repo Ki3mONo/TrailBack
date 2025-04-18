@@ -1,68 +1,76 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Zmienne globalne */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    --primary: #3b82f6; /* blue-500 */
+    --primary-dark: #1d4ed8; /* blue-700 */
+    --secondary: #10b981; /* emerald-500 */
+    --secondary-dark: #047857; /* emerald-700 */
+    --background: #f3f4f6; /* gray-100 */
+    --card: #ffffff;
+    --text: #1f2937; /* gray-800 */
+    --text-light: #6b7280; /* gray-500 */
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+    @apply bg-gray-100 text-gray-800 font-sans;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Komponenty aplikacji */
+@layer components {
+    .btn {
+        @apply px-4 py-2 rounded-lg font-medium transition-colors;
+    }
+
+    .btn-primary {
+        @apply bg-blue-500 hover:bg-blue-600 text-white btn;
+    }
+
+    .btn-secondary {
+        @apply bg-emerald-600 hover:bg-emerald-700 text-white btn;
+    }
+
+    .btn-outline {
+        @apply border border-gray-300 hover:bg-gray-100 btn;
+    }
+
+    .card {
+        @apply bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow;
+    }
+
+    .input {
+        @apply w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none;
+    }
+
+    .nav-link {
+        @apply px-3 py-2 rounded-md hover:bg-gray-200 transition-colors;
+    }
+
+    .memory-item {
+        @apply card border-l-4 border-l-blue-500;
+    }
+    .memory-grid {
+        @apply grid gap-6 sm:grid-cols-1 md:grid-cols-2;
+    }
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* Animacje */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Dostosowania do mapy */
+.leaflet-container {
+    @apply rounded-lg border border-gray-300 shadow-sm;
+    height: 400px !important;
 }
