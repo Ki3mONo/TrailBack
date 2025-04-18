@@ -15,7 +15,7 @@ export default function Auth() {
             console.error(error.message);
         } else {
             console.log("Zalogowano pomyślnie!", data);
-            window.location.href = "/home";
+            window.location.href = "/";
         }
     };
 
