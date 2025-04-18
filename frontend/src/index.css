@@ -4,22 +4,25 @@
 
 /* Zmienne globalne */
 :root {
-    --primary: #3b82f6; /* blue-500 */
-    --primary-dark: #1d4ed8; /* blue-700 */
-    --secondary: #10b981; /* emerald-500 */
-    --secondary-dark: #047857; /* emerald-700 */
-    --background: #f3f4f6; /* gray-100 */
+    --primary: #3b82f6;
+    --primary-dark: #1d4ed8;
+    --secondary: #10b981;
+    --secondary-dark: #047857;
+    --background: #f3f4f6;
     --card: #ffffff;
-    --text: #1f2937; /* gray-800 */
-    --text-light: #6b7280; /* gray-500 */
+    --text: #1f2937;
+    --text-light: #6b7280;
+}
+
+.dark {
+    --background: #1e1e20;   /* ciemny grafit */
+    --card: #2b2b2f;         /* neutralna szarość */
+    --text: #e5e7eb;         /* jasny tekst */
+    --text-light: #9ca3af;   /* szarość na ikonki itp. */
 }
 
 body {
-    @apply bg-gray-100 text-gray-800 font-sans;
-}
-
-.dark body {
-    @apply bg-gray-900 text-gray-100;
+    @apply bg-[var(--background)] text-[var(--text)] font-sans;
 }
 
 /* Komponenty aplikacji */
@@ -41,15 +44,11 @@ body {
     }
 
     .dark .btn-outline {
-        @apply border-gray-600 hover:bg-gray-800 text-white;
+        @apply border-gray-600 hover:bg-gray-700 text-white;
     }
 
     .card {
-        @apply bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow;
-    }
-
-    .dark .card {
-        @apply bg-gray-800 text-white;
+        @apply bg-[var(--card)] p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow;
     }
 
     .input {
@@ -57,7 +56,7 @@ body {
     }
 
     .dark .input {
-        @apply bg-gray-900 border-gray-700 text-white;
+        @apply bg-gray-800 border-gray-700 text-white;
     }
 
     .nav-link {

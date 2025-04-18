@@ -10,24 +10,21 @@ function App() {
     const [view, setView] = useState<"list" | "add">("list");
     const [darkMode, setDarkMode] = useState<boolean>(false);
 
-    // Ładowanie dark mode z localStorage
+    // Pobranie motywu z localStorage
     useEffect(() => {
         const storedTheme = localStorage.getItem("theme");
-        if (storedTheme === "dark") {
-            setDarkMode(true);
-        }
+        if (storedTheme === "dark") setDarkMode(true);
     }, []);
 
-    // Zmiana klasy .dark na <html> + zapis do localStorage
+    // Ustawienie klasy dark + zapis do localStorage
     useEffect(() => {
         document.documentElement.classList.toggle("dark", darkMode);
         localStorage.setItem("theme", darkMode ? "dark" : "light");
     }, [darkMode]);
 
-    const toggleDarkMode = () => {
-        setDarkMode((prev) => !prev);
-    };
+    const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
+    // Logika uwierzytelniania
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
         supabase.auth.onAuthStateChange((_event, session) => {
@@ -43,13 +40,14 @@ function App() {
     if (!user) return <Auth />;
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 px-4 py-6 transition-colors">
-            <div className="max-w-4xl mx-auto space-y-6">
-                {/* Header */}
+        <div className={`min-h-screen transition-colors duration-300 
+            ${darkMode ? "bg-[#1e1e20] text-gray-100" : "bg-gray-100 text-gray-800"}`}>
+            <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+                {/* Nagłówek */}
                 <header className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-gray-700">
                     <div className="flex items-center gap-3">
-                        <img src="/icon.png" alt="TrailBack logo" className="h-20 w-20" />
-                        {/* <h1 className="text-3xl font-bold text-blue-600">TrailBack</h1> */}
+                        <img src="/icon.png" alt="TrailBack logo" className="h-12 w-12" />
+                        <h1 className="text-2xl font-bold tracking-tight">TrailBack</h1>
                     </div>
 
                     <nav className="flex items-center gap-2">
@@ -81,7 +79,7 @@ function App() {
                     </nav>
                 </header>
 
-                {/* Główny widok */}
+                {/* Widok */}
                 <main className="fade-in">
                     {view === "list" ? (
                         <MemoriesList darkMode={darkMode} />

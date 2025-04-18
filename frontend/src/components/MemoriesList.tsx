@@ -94,7 +94,7 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                                 <TileLayer
                                     url={
                                         darkMode
-                                            ? "https://tiles.stadiamaps.com/tiles/alidade_dark/{z}/{x}/{y}{r}.png"
+                                            ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
                                             : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     }
                                 />
