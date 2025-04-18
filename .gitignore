@@ -1,0 +1,39 @@
+# Node modules (frontend)
+frontend/node_modules/
+frontend/dist/
+
+# Build artifacts (frontend)
+frontend/.vite/
+frontend/.next/
+frontend/build/
+
+# Env files (frontend)
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+
+# Python virtual env (backend)
+backend/venv/
+backend/.venv/
+
+# Python cache
+backend/__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Env files (backend)
+backend/.env
+backend/.env.local
+
+# Supabase config (optional, only if local CLI used)
+supabase/.env
+supabase/.supabase
+supabase/.temp
+
+# System files
+.DS_Store
+*.log
+*.sqlite3
+.env
+.env.*
