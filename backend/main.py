@@ -8,7 +8,7 @@ wspomnieniami i zdjęciami powiązanymi z lokalizacjami geograficznymi.
 import os
 import logging
 from typing import List, Optional, Dict
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request, status
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request, status, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 import uvicorn
 from shapely import wkb
 from datetime import datetime
+from uuid import uuid4
 
 # ================================
 # Konfiguracja loggera
@@ -55,7 +56,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,  # jeśli używasz cookies/tokenów
     allow_methods=["*"],
     allow_headers=["*"],
@@ -110,6 +111,10 @@ class ProfileOut(BaseModel):
     username: Optional[str] = None
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    
+class ProfileUpdate(BaseModel):
+    full_name: str
+    username: str
 
 # ================================
 # Obsługa błędów
@@ -173,6 +178,70 @@ async def get_memories(user_id: str, db: Client = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Nie udało się pobrać wspomnień")
 
 
+@app.get("/memories/shared", response_model=List[MemoryOut], tags=["Memories"])
+async def get_shared_memories(user_id: str, db: Client = Depends(get_db)):
+    try:
+        response = db.table("memory_shares") \
+            .select("memory_id") \
+            .eq("shared_with", user_id) \
+            .execute()
+
+        memory_ids = [s["memory_id"] for s in response.data]
+        if not memory_ids:
+            return []
+
+        memory_response = db.table("memories").select("*").in_("id", memory_ids).execute()
+        memories = []
+
+        for m in memory_response.data:
+            location_wkb_hex = m.get("location")
+            lat = lng = None
+
+            if location_wkb_hex:
+                try:
+                    from shapely import wkb
+                    point = wkb.loads(bytes.fromhex(location_wkb_hex))
+                    lng = point.x
+                    lat = point.y
+                except Exception as e:
+                    continue
+
+            if lat is None or lng is None:
+                continue
+
+            memories.append({
+                "id": m["id"],
+                "title": m["title"],
+                "description": m.get("description"),
+                "lat": lat,
+                "lng": lng,
+                "created_at": m.get("created_at"),
+                "created_by": m["created_by"]
+            })
+
+        return memories
+    except Exception as e:
+        logger.error(f"Błąd przy pobieraniu udostępnionych wspomnień: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się pobrać udostępnionych wspomnień")
+
+
+@app.get("/memories/{memory_id}/shares", tags=["Memories"])
+async def get_memory_shares(memory_id: str, db: Client = Depends(get_db)):
+    """
+    Zwraca listę obiektów z shared_with i shared_by.
+    """
+    try:
+        response = db.table("memory_shares") \
+            .select("shared_with, shared_by") \
+            .eq("memory_id", memory_id) \
+            .execute()
+
+        return response.data
+
+    except Exception as e:
+        logger.error(f"Błąd przy pobieraniu udostępnionych użytkowników: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się pobrać udostępnień")
+
 
 @app.get("/photos", response_model=List[PhotoOut], tags=["Photos"])
 async def get_photos(memory_id: str, db: Client = Depends(get_db)):
@@ -194,7 +263,7 @@ async def list_users(
     db: Client = Depends(get_db)
 ):
     try:
-        query = db.table("profiles").select("id, username, full_name, avatar_url, email")
+        query = db.table("user_profiles_view").select("id, email, username, full_name, avatar_url")
 
         if search:
             query = query.filter("username", "ilike", f"%{search}%")
@@ -202,14 +271,13 @@ async def list_users(
         response = query.execute()
         users = response.data or []
 
-        # Ukryj samego siebie
         filtered_users = [u for u in users if u["id"] != current_user]
-
         return filtered_users
 
     except Exception as e:
         logger.error(f"Error listing users: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Nie udało się pobrać listy użytkowników")
+
 
 
 @app.get("/photos/{photo_id}", response_model=PhotoOut, tags=["Photos"])
@@ -312,43 +380,112 @@ async def accept_friend_request(user_id: str, friend_id: str, db: Client = Depen
     return {"message": "Zaproszenie zaakceptowane"}
 
 
-
 @app.post("/profile/avatar", response_model=ProfileOut, tags=["Users"])
 async def upload_avatar(
-    user_id: str,
+    user_id: str = Form(...),
     file: UploadFile = File(...),
     db: Client = Depends(get_db),
 ):
-    contents = await file.read()
-    ext = file.filename.rsplit(".", 1)[-1].lower()
-    if ext not in ("jpg", "jpeg", "png"):
-        raise HTTPException(400, "Only JPG/PNG allowed")
+    try:
+        contents = await file.read()
+        ext = file.filename.rsplit(".", 1)[-1].lower()
 
-    bucket = "avatars"
-    key = f"{user_id}/{uuid4().hex}.{ext}"
-    upload = supabase.storage.from_(bucket).upload(key, contents, {
-        "contentType": file.content_type
-    })
-    if upload.error:
-        logger.error("Upload error:", upload.error)
-        raise HTTPException(500, "Failed to upload avatar")
+        if ext not in ("jpg", "jpeg", "png"):
+            raise HTTPException(400, "Dozwolone tylko JPG/PNG")
 
-    url_data = supabase.storage.from_(bucket).getPublicUrl(key)
-    public_url = url_data.data.get("publicUrl")
-    if not public_url:
-        raise HTTPException(500, "Failed to get avatar URL")
+        bucket = "avatars"
+        key = f"{user_id}/{uuid4().hex}.{ext}"
 
-    resp = (
-        db.table("profiles")
-          .update({"avatar_url": public_url})
-          .eq("id", user_id)
-          .single()
-          .execute()
-    )
-    if resp.error:
-        logger.error("DB update error:", resp.error)
-        raise HTTPException(500, "Failed to update avatar_url in profile")
-    return resp.data
+        upload_response = supabase.storage.from_(bucket).upload(key, contents, {
+            "contentType": file.content_type
+        })
+
+        # Sprawdzenie błędu uploadu – tylko jeśli upload_response to dict lub zawiera status
+        if not upload_response or getattr(upload_response, "status_code", 200) >= 400:
+            raise HTTPException(500, "Błąd uploadu avatara")
+
+        public_url = supabase.storage.from_(bucket).get_public_url(key)
+
+        if not public_url:
+            raise HTTPException(500, "Nie udało się uzyskać publicznego URL")
+
+        db_response = (
+            db.table("profiles")
+            .update({"avatar_url": public_url})
+            .eq("id", user_id)
+            .execute()
+        )
+
+        # Sprawdzenie danych
+        if not db_response or not db_response.data:
+            raise HTTPException(500, "Nie udało się zaktualizować profilu")
+
+        return db_response.data[0]
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Błąd podczas uploadu avatara: {str(e)}")
+
+
+
+# ================================
+# POST: Dodaj użytkownika do wspomnienia (memory_share)
+# ================================
+@app.post("/memories/{memory_id}/share-user", tags=["Memories"])
+async def share_memory_with_user(memory_id: str, shared_with: str, shared_by: str, db: Client = Depends(get_db)):
+    try:
+        # Sprawdź czy właściciel
+        ownership = db.table("memories").select("id").eq("id", memory_id).eq("created_by", shared_by).execute().data
+        if not ownership:
+            raise HTTPException(403, "Tylko właściciel może udostępniać")
+
+        db.table("memory_shares").insert({
+            "memory_id": memory_id,
+            "shared_with": shared_with,
+            "shared_by": shared_by,
+            "shared_at": datetime.utcnow().isoformat()
+        }).execute()
+        return {"message": "Użytkownik dodany do wspomnienia"}
+    except Exception as e:
+        logger.error(f"Błąd przy udostępnianiu wspomnienia: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się udostępnić wspomnienia")
+    
+@app.post("/memories/{memory_id}/upload-photo")
+async def upload_memory_photo(memory_id: str, user_id: str, file: UploadFile = File(...), db: Client = Depends(get_db)):
+    try:
+        contents = await file.read()
+        ext = file.filename.rsplit(".", 1)[-1].lower()
+        if ext not in ("jpg", "jpeg", "png"):
+            raise HTTPException(400, "Dozwolone tylko JPG/PNG")
+
+        bucket = "photos"
+        key = f"{memory_id}/{uuid4().hex}.{ext}"
+
+        upload_response = supabase.storage.from_(bucket).upload(key, contents, {
+            "contentType": file.content_type
+        })
+
+        if hasattr(upload_response, "error") and upload_response.error:
+            raise HTTPException(500, "Błąd uploadu pliku")
+
+        public_url = supabase.storage.from_("photos").get_public_url(key)
+
+        if not public_url:
+            raise HTTPException(500, "Nie można pobrać URL zdjęcia")
+
+        db.table("photos").insert({
+            "memory_id": memory_id,
+            "url": public_url,
+            "uploaded_by": user_id
+        }).execute()
+
+        return {"message": "Zdjęcie dodane", "url": public_url}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Błąd podczas uploadu zdjęcia: {str(e)}")
 
 # ================================
 # PUT ENDPOINTS
@@ -379,6 +516,29 @@ async def update_profile(
     except Exception as e:
         logger.error(f"Błąd aktualizacji profilu: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Nie udało się zaktualizować profilu")
+    
+@app.put("/profile", tags=["Users"])
+async def update_profile(
+    user_id: str = Form(...),
+    profile: ProfileUpdate = ...,
+    db: Client = Depends(get_db),
+):
+    try:
+        response = (
+            db.table("profiles")
+            .update({
+                "full_name": profile.full_name,
+                "username": profile.username,
+            })
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        if response.error:
+            raise HTTPException(500, detail="Błąd aktualizacji profilu")
+        return response.data
+    except Exception as e:
+        raise HTTPException(500, detail="Nie udało się zapisać zmian")
 
 # ================================
 # DELETE ENDPOINTS
@@ -393,6 +553,132 @@ async def delete_photo(photo_id: str, user_id: str, db: Client = Depends(get_db)
         raise HTTPException(status_code=403, detail="Brak dostępu")
     db.table("photos").delete().filter("id", "eq", photo_id).execute()
     return {"message": "Zdjęcie usunięte"}
+
+@app.delete("/friends/remove")
+async def remove_friend(user_id: str, friend_id: str):
+    try:
+        # Delete the friendship where user_id and friend_id match
+        response = supabase.table("friendships").delete().match({
+            "user_id": user_id,
+            "friend_id": friend_id
+        }).execute()
+
+        # Also delete the reverse friendship if it exists
+        supabase.table("friendships").delete().match({
+            "user_id": friend_id,
+            "friend_id": user_id
+        }).execute()
+
+        return {"message": "Friendship removed successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# ================================
+# DELETE: Usuwanie wspomnienia + zdjęć + plików z bucketu
+# ================================
+@app.delete("/memories/{memory_id}", tags=["Memories"])
+async def delete_memory(memory_id: str, user_id: str, db: Client = Depends(get_db)):
+    try:
+        # Sprawdź czy user to właściciel
+        ownership = db.table("memories") \
+            .select("id") \
+            .eq("id", memory_id) \
+            .eq("created_by", user_id) \
+            .execute().data
+
+        if not ownership:
+            raise HTTPException(status_code=403, detail="Brak uprawnień do usunięcia")
+
+        # Pobierz zdjęcia
+        photos = db.table("photos") \
+            .select("id, url") \
+            .eq("memory_id", memory_id) \
+            .execute().data
+
+        # Usuń zdjęcia z bucketu
+        for photo in photos:
+            url = photo["url"]
+            key = "/".join(url.split("/")[-2:])  # assumes /bucket/key format
+            supabase.storage.from_("photos").remove([key])
+
+        # Usuń zdjęcia z bazy
+        db.table("photos").delete().eq("memory_id", memory_id).execute()
+
+        # Usuń memory
+        db.table("memories").delete().eq("id", memory_id).execute()
+        return {"message": "Wspomnienie oraz powiązane zdjęcia zostały usunięte"}
+    except Exception as e:
+        logger.error(f"Błąd usuwania wspomnienia: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Błąd usuwania wspomnienia")
+
+# ================================
+# DELETE: Usuwanie zdjęcia z memories (tylko plik i rekord, nie memory)
+# ================================
+@app.delete("/memories/{memory_id}/photo/{photo_id}", tags=["Photos"])
+async def delete_memory_photo(memory_id: str, photo_id: str, user_id: str, db: Client = Depends(get_db)):
+    try:
+        photo = db.table("photos").select("url, uploaded_by").eq("id", photo_id).single().execute().data
+        if not photo:
+            raise HTTPException(404, "Zdjęcie nie istnieje")
+
+        # Sprawdź uprawnienia
+        owner_check = db.table("memories").select("id").eq("id", memory_id).eq("created_by", user_id).execute().data
+        shared_check = db.table("memory_shares").select("memory_id").eq("memory_id", memory_id).eq("shared_with", user_id).execute().data
+        if not owner_check and not shared_check:
+            raise HTTPException(403, "Brak dostępu do zdjęcia")
+
+        # Usuń z bucketu
+        key = "/".join(photo["url"].split("/")[-2:])
+        supabase.storage.from_("photos").remove([key])
+
+        # Usuń z bazy
+        db.table("photos").delete().eq("id", photo_id).execute()
+        return {"message": "Zdjęcie zostało usunięte"}
+    except Exception as e:
+        logger.error(f"Błąd usuwania zdjęcia: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się usunąć zdjęcia")
+# ================================
+# DELETE: Usuń użytkownika ze wspomnienia
+# ================================
+@app.delete("/memories/{memory_id}/share-user/{shared_with}", tags=["Memories"])
+async def unshare_memory_with_user(memory_id: str, shared_with: str, user_id: str, db: Client = Depends(get_db)):
+    try:
+        # Tylko właściciel może cofnąć udostępnienie
+        ownership = db.table("memories").select("id").eq("id", memory_id).eq("created_by", user_id).execute().data
+        if not ownership:
+            raise HTTPException(403, "Brak uprawnień do cofnięcia udostępnienia")
+
+        db.table("memory_shares").delete().eq("memory_id", memory_id).eq("shared_with", shared_with).execute()
+        return {"message": "Dostęp użytkownika do wspomnienia został cofnięty"}
+    except Exception as e:
+        logger.error(f"Błąd przy cofnięciu udostępnienia: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się cofnąć dostępu")
+
+@app.delete("/memories/{memory_id}/share-user/{shared_with}", tags=["Memories"])
+async def unshare_memory_with_user(memory_id: str, shared_with: str, user_id: str, db: Client = Depends(get_db)):
+    """
+    Pozwala właścicielowi wspomnienia cofnąć udostępnienie danemu użytkownikowi.
+    """
+    try:
+        # Sprawdź, czy current user to właściciel wspomnienia
+        ownership = db.table("memories").select("id") \
+            .eq("id", memory_id).eq("created_by", user_id).execute().data
+        if not ownership:
+            raise HTTPException(status_code=403, detail="Tylko właściciel może cofnąć udostępnienie.")
+
+        # Usuń wpis z memory_shares
+        db.table("memory_shares") \
+            .delete() \
+            .eq("memory_id", memory_id) \
+            .eq("shared_with", shared_with) \
+            .execute()
+
+        return {"message": "Udostępnienie cofnięte"}
+
+    except Exception as e:
+        logger.error(f"Błąd przy cofnięciu udostępnienia: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się cofnąć udostępnienia")
+
 
 # ================================
 # OpenAPI + Start serwera
