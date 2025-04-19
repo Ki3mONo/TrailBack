@@ -4,6 +4,8 @@ import { User } from "@supabase/supabase-js";
 import Auth from "./components/Auth";
 import MapForm from "./components/MapForm";
 import MemoriesList from "./components/MemoriesList";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
     const [user, setUser] = useState<User | null>(null);
@@ -88,6 +90,7 @@ function App() {
                     )}
                 </main>
             </div>
+            <ToastContainer position="bottom-center" autoClose={3000} />
         </div>
     );
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import { toast } from "react-toastify";
 import LocationPicker from "./LocationPicker";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
 
@@ -100,7 +101,7 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
             }
         }
 
-        alert("✅ Wspomnienie i zdjęcia zostały dodane!");
+        toast.success("Wspomnienie zostało dodane!");
         setTitle("");
         setDesc("");
         setFiles([]);

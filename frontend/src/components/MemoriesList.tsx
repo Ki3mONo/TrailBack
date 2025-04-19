@@ -31,6 +31,20 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
+    const formatPolishDate = (dateString:string) => {
+        const date = new Date(dateString);
+        const dayName = date.toLocaleDateString('pl-PL', { weekday: 'long' });
+        const monthName = date.toLocaleDateString('pl-PL', { month: 'long' });
+        const day = date.getDate();
+        const year = date.getFullYear();
+
+        return `${capitalize(dayName)} ${day} ${monthName} ${year}`;
+    };
+
+    const capitalize = (str:string) => str.charAt(0).toUpperCase() + str.slice(1);
+
+
+
     useEffect(() => {
         const fetchMemories = async () => {
             try {
@@ -145,9 +159,7 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                                         📍 {memory.lat.toFixed(4)}, {memory.lng.toFixed(4)}
                                     </p>
                                     <p className="text-xs text-gray-400 mt-2">
-                                        {memory.created_at
-                                            ? new Date(memory.created_at).toLocaleString()
-                                            : "?"}
+                                        {memory.created_at ? formatPolishDate(memory.created_at) : "?"}
                                     </p>
                                 </li>
                             ))}
