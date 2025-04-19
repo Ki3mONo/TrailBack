@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 
 export default function Auth() {
     const [email, setEmail] = useState("");
@@ -7,32 +7,42 @@ export default function Auth() {
     const [errorMessage, setErrorMessage] = useState("");
     const [isLoginMode, setIsLoginMode] = useState(true);
 
+    // Sprawdzenie motywu przy montowaniu komponentu
+    useEffect(() => {
+        const theme = localStorage.getItem("theme");
+        if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+    }, []);
+
     const handleLogin = async () => {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
             setErrorMessage(error.message);
             console.error(error.message);
         } else {
-            console.log("Zalogowano pomyślnie!", data);
-            window.location.href = "/";
+            console.log("Zalogowano pomyślnie!");
+            // App.tsx przechwyci zmianę sesji i pokaże widok użytkownika
         }
     };
 
     const handleRegister = async () => {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ email, password });
 
         if (error) {
             setErrorMessage(error.message);
             console.error(error.message);
         } else {
-            console.log("Rejestracja pomyślna!", data);
-            window.location.href = "/";
+            console.log("Rejestracja pomyślna!");
+            // App.tsx przechwyci zmianę sesji
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4 transition-colors duration-300">
             <div className="card w-full max-w-md p-8 space-y-6">
                 <h2 className="text-2xl font-bold text-center">
                     {isLoginMode ? "Zaloguj się" : "Zarejestruj się"}
