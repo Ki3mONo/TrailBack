@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, validator
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import uvicorn
+from datetime import datetime
 
 # ================================
 # Konfiguracja loggera
@@ -67,6 +68,7 @@ class MemoryCreate(BaseModel):
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
     created_by: str
+    created_at: datetime
 
     @validator('title')
     def title_not_empty(cls, v):
@@ -189,7 +191,8 @@ async def create_memory(memory: MemoryCreate, db: Client = Depends(get_db)):
         "title": memory.title.strip(),
         "description": memory.description.strip() if memory.description else None,
         "location": point,
-        "created_by": memory.created_by
+        "created_by": memory.created_by,
+        "created_at": memory.created_at  # <-- dodano
     }).execute()
     record = response.data[0]
     return {
