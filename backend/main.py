@@ -205,6 +205,19 @@ async def list_users(
         logger.error(f"Error listing users: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Nie udało się pobrać listy użytkowników")
 
+@app.get("/photos/{photo_id}", response_model=PhotoOut, tags=["Photos"])
+async def get_photo(photo_id: str, db: Client = Depends(get_db)):
+    try:
+        response = db.table("photos").select("*").eq("id", photo_id).execute()
+
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Zdjęcie nie istnieje")
+
+        return response.data[0]
+
+    except Exception as e:
+        logger.error(f"Błąd przy pobieraniu zdjęcia o ID {photo_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się pobrać zdjęcia")
 
 
 # ================================

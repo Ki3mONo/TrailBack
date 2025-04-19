@@ -4,10 +4,12 @@ type Props = {
     url: string;
     onClose: () => void;
     allImages?: string[];
+    memoryName: string;
 };
 
-export default function ImageModal({ url, onClose, allImages = [] }: Props) {
+export default function ImageModal({ url, onClose, allImages = [], memoryName }: Props) {
     const [current, setCurrent] = useState(url);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     useEffect(() => {
         setCurrent(url);
@@ -21,8 +23,16 @@ export default function ImageModal({ url, onClose, allImages = [] }: Props) {
     const hasPrev = currentIndex > 0;
     const hasNext = currentIndex < allImages.length - 1;
 
-    const showPrev = () => hasPrev && setCurrent(allImages[currentIndex - 1]);
-    const showNext = () => hasNext && setCurrent(allImages[currentIndex + 1]);
+    const changeImage = (newUrl: string) => {
+        setIsTransitioning(true);
+        setTimeout(() => {
+            setCurrent(newUrl);
+            setIsTransitioning(false);
+        }, 200);
+    };
+
+    const showPrev = () => hasPrev && changeImage(allImages[currentIndex - 1]);
+    const showNext = () => hasNext && changeImage(allImages[currentIndex + 1]);
 
     const handleKey = (e: KeyboardEvent) => {
         if (e.key === "ArrowLeft") showPrev();
@@ -35,9 +45,33 @@ export default function ImageModal({ url, onClose, allImages = [] }: Props) {
         return () => window.removeEventListener("keydown", handleKey);
     });
 
+    const handleDownload = async () => {
+        try {
+            const response = await fetch(current);
+            const blob = await response.blob();
+            const urlObject = window.URL.createObjectURL(blob);
+
+            const number = currentIndex + 1;
+            const paddedNumber = number.toString().padStart(2, "0");
+            const sanitizedName = memoryName.replace(/\s+/g, "_").toLowerCase();
+            const fileName = `${sanitizedName}_${paddedNumber}.jpg`;
+
+            const link = document.createElement("a");
+            link.href = urlObject;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.URL.revokeObjectURL(urlObject);
+        } catch (error) {
+            console.error("Błąd pobierania zdjęcia:", error);
+        }
+    };
+
     return (
         <div
-            className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4"
             onClick={onClose}
         >
             {/* Zamknij */}
@@ -51,8 +85,8 @@ export default function ImageModal({ url, onClose, allImages = [] }: Props) {
                 </svg>
             </button>
 
+            {/* Obraz + strzałki */}
             <div className="relative flex items-center justify-center w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
-                {/* Strzałka lewa */}
                 {hasPrev && (
                     <button
                         onClick={showPrev}
@@ -65,14 +99,15 @@ export default function ImageModal({ url, onClose, allImages = [] }: Props) {
                     </button>
                 )}
 
-                {/* Obraz */}
                 <img
+                    key={current}
                     src={current}
                     alt="Podgląd zdjęcia"
-                    className="rounded max-h-[80vh] w-auto mx-auto shadow-lg transition duration-300"
+                    className={`rounded max-h-[80vh] w-auto mx-auto shadow-lg transition-opacity duration-300 ${
+                        isTransitioning ? "opacity-0" : "opacity-100"
+                    }`}
                 />
 
-                {/* Strzałka prawa */}
                 {hasNext && (
                     <button
                         onClick={showNext}
@@ -86,14 +121,18 @@ export default function ImageModal({ url, onClose, allImages = [] }: Props) {
                 )}
             </div>
 
+            {/* Numeracja zdjęcia */}
+            {allImages.length > 1 && (
+                <div className="mt-4 text-white text-sm">{`Zdjęcie ${currentIndex + 1} z ${allImages.length}`}</div>
+            )}
+
             {/* Pobierz w prawym dolnym rogu */}
-            <a
-                href={current}
-                download
+            <button
+                onClick={handleDownload}
                 className="absolute bottom-4 right-4 text-white bg-blue-600 px-6 py-3 rounded hover:bg-blue-700 transition"
             >
                 Pobierz zdjęcie
-            </a>
+            </button>
         </div>
     );
 }
