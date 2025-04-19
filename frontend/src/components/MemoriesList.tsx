@@ -84,8 +84,8 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                                 className="memory-item cursor-pointer hover:shadow-xl transition"
                                 onClick={() => setSelected(memory)}
                             >
-                                <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
-                                    {memory.title}
+                                <h3 className="text-lg font-semibold text-blue-700 dark:text-white flex items-center gap-2">
+                                {memory.title}
                                     {isShared && (
                                         <span className="text-xs bg-gray-200 text-gray-700 rounded-full px-2 py-0.5">
                                             Udostępnione

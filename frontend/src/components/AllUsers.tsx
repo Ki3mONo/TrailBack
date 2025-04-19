@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
+import UserItem from "./UserItem";
 
 interface User {
     id: string;
@@ -35,6 +36,7 @@ export default function AllUsers({
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [removeTarget, setRemoveTarget] = useState<User | null>(null);
     const [loadingRemove, setLoadingRemove] = useState(false);
+    const [filterText, setFilterText] = useState("");
 
     const isFriend = (id: string) =>
         friends.some(
@@ -76,48 +78,44 @@ export default function AllUsers({
         }
     };
 
+    const filteredUsers = users.filter((u) => {
+        const search = filterText.toLowerCase();
+        return (
+            u.full_name?.toLowerCase().includes(search) ||
+            u.username?.toLowerCase().includes(search) ||
+            u.email?.toLowerCase().includes(search)
+        );
+    });
+
     return (
         <div>
             <h2 className="text-xl font-semibold mb-2">Wszyscy użytkownicy</h2>
 
+            <div className="relative mb-4">
+                <span className="absolute inset-y-0 left-3 flex items-center text-gray-400 dark:text-gray-300 text-lg">
+                    🔍
+                </span>
+                <input
+                    type="text"
+                    placeholder="Szukaj użytkownika..."
+                    className="w-full pl-10 pr-3 py-2 border rounded dark:bg-gray-700 dark:text-white"
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                />
+            </div>
+
+
             <div className="max-h-96 overflow-y-auto pr-2">
                 <ul className="space-y-2">
-                    {users.map((u) => (
-                        <li key={u.id} className="flex justify-between items-center border-b pb-2">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300 dark:border-gray-600">
-                                    <img
-                                        src={u.avatar_url && u.avatar_url.trim() !== "" ? u.avatar_url : "/placeholder-avatar.png"}
-                                        alt="Avatar"
-                                        className="object-cover w-full h-full"
-                                    />
-                                </div>
-                                <div>
-                                    <p className="font-medium">{u.full_name || "Nieznany użytkownik"}</p>
-                                    <p className="text-sm text-gray-500">@{u.username}</p>
-                                    <p className="text-sm text-gray-400">{u.email}</p>
-                                </div>
-                            </div>
-
-
-                            {isFriend(u.id) ? (
-                                <button
-                                    onClick={() => setRemoveTarget(u)}
-                                    className="btn text-sm text-red-500"
-                                >
-                                    🗑 Usuń znajomego
-                                </button>
-                            ) : isPendingSent(u.id) ? (
-                                <span className="text-yellow-500 font-medium">⌛ Zaproszony</span>
-                            ) : (
-                                <button
-                                    onClick={() => onSend(u.id)}
-                                    className="btn text-sm"
-                                >
-                                    ➕ Dodaj
-                                </button>
-                            )}
-                        </li>
+                    {filteredUsers.map((u) => (
+                        <UserItem
+                            key={u.id}
+                            user={u}
+                            isFriend={isFriend(u.id)}
+                            isPending={isPendingSent(u.id)}
+                            onSend={() => onSend(u.id)}
+                            onRemove={() => setRemoveTarget(u)}
+                        />
                     ))}
                 </ul>
             </div>
