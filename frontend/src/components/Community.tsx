@@ -96,6 +96,7 @@ const Community = ({ userId }: { userId: string }) => {
                 outgoingRequests={outgoingRequests}
                 userId={userId}
                 onSend={sendRequest}
+                onRefresh={loadRelations} // 👈 DODANE
             />
         </div>
     );
