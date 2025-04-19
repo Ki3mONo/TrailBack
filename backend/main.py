@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, validator
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import uvicorn
+from shapely import wkb
 from datetime import datetime
 
 # ================================
@@ -135,11 +136,19 @@ async def get_memories(user_id: str, db: Client = Depends(get_db)):
         memories = []
 
         for m in response.data:
-            location = m.get("location", {})
-            coordinates = location.get("coordinates", [None, None])
+            location_wkb_hex = m.get("location")
+            lat = lng = None
 
-            lng = coordinates[0] if len(coordinates) > 0 else None
-            lat = coordinates[1] if len(coordinates) > 1 else None
+            if location_wkb_hex:
+                try:
+                    point = wkb.loads(bytes.fromhex(location_wkb_hex))
+                    lng = point.x
+                    lat = point.y
+                except Exception as e:
+                    logger.warning(f"Nie udało się sparsować WKB: {location_wkb_hex} ({e})")
+
+            if lat is None or lng is None:
+                continue
 
             memories.append({
                 "id": m["id"],
@@ -156,6 +165,7 @@ async def get_memories(user_id: str, db: Client = Depends(get_db)):
     except Exception as e:
         logger.error(f"Błąd przy pobieraniu wspomnień: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Nie udało się pobrać wspomnień")
+
 
 
 @app.get("/photos", response_model=List[PhotoOut], tags=["Photos"])
