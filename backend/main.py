@@ -8,7 +8,7 @@ wspomnieniami i zdjęciami powiązanymi z lokalizacjami geograficznymi.
 import os
 import logging
 from typing import List, Optional, Dict
-from fastapi import FastAPI, HTTPException, Depends, Request, status
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
@@ -103,6 +103,12 @@ class PhotoOut(BaseModel):
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     username: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+class ProfileOut(BaseModel):
+    id: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
     avatar_url: Optional[str] = None
 
 # ================================
@@ -218,6 +224,19 @@ async def get_photo(photo_id: str, db: Client = Depends(get_db)):
     except Exception as e:
         logger.error(f"Błąd przy pobieraniu zdjęcia o ID {photo_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Nie udało się pobrać zdjęcia")
+    
+@app.get("/profile", response_model=ProfileOut, tags=["Users"])
+async def get_profile(user_id: str, db: Client = Depends(get_db)):
+    resp = (
+        db.table("profiles")
+          .select("id, username, full_name, avatar_url")
+          .eq("id", user_id)
+          .single()
+          .execute()
+    )
+    if not resp.data:
+        raise HTTPException(404, "Profile not found")
+    return resp.data
 
 
 # ================================
@@ -290,6 +309,45 @@ async def accept_friend_request(user_id: str, friend_id: str, db: Client = Depen
         .match({"user_id": friend_id, "friend_id": user_id, "status": "pending"}) \
         .execute()
     return {"message": "Zaproszenie zaakceptowane"}
+
+
+
+@app.post("/profile/avatar", response_model=ProfileOut, tags=["Users"])
+async def upload_avatar(
+    user_id: str,
+    file: UploadFile = File(...),
+    db: Client = Depends(get_db),
+):
+    contents = await file.read()
+    ext = file.filename.rsplit(".", 1)[-1].lower()
+    if ext not in ("jpg", "jpeg", "png"):
+        raise HTTPException(400, "Only JPG/PNG allowed")
+
+    bucket = "avatars"
+    key = f"{user_id}/{uuid4().hex}.{ext}"
+    upload = supabase.storage.from_(bucket).upload(key, contents, {
+        "contentType": file.content_type
+    })
+    if upload.error:
+        logger.error("Upload error:", upload.error)
+        raise HTTPException(500, "Failed to upload avatar")
+
+    url_data = supabase.storage.from_(bucket).getPublicUrl(key)
+    public_url = url_data.data.get("publicUrl")
+    if not public_url:
+        raise HTTPException(500, "Failed to get avatar URL")
+
+    resp = (
+        db.table("profiles")
+          .update({"avatar_url": public_url})
+          .eq("id", user_id)
+          .single()
+          .execute()
+    )
+    if resp.error:
+        logger.error("DB update error:", resp.error)
+        raise HTTPException(500, "Failed to update avatar_url in profile")
+    return resp.data
 
 # ================================
 # PUT ENDPOINTS
