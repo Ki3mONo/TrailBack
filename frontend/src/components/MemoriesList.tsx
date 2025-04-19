@@ -3,7 +3,7 @@ import { supabase } from "../supabaseClient";
 import { toast } from "react-toastify";
 import MemoryModal from "./MemoryModal";
 
-type Memory = {
+type MemoryBase = {
     id: string;
     title: string;
     description?: string;
@@ -13,9 +13,13 @@ type Memory = {
     created_by: string;
 };
 
+type ExtendedMemory = MemoryBase & {
+    isShared: boolean;
+};
+
 export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
-    const [memories, setMemories] = useState<Memory[]>([]);
-    const [selected, setSelected] = useState<Memory | null>(null);
+    const [selected, setSelected] = useState<ExtendedMemory | null>(null);
+    const [memories, setMemories] = useState<ExtendedMemory[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -53,9 +57,13 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                     index === self.findIndex((m) => m.id === value.id)
             );
 
-            setMemories(uniqueMemories);
+            setMemories(uniqueMemories.map(m => ({
+                ...m,
+                isShared: m.created_by !== user.id
+            })));
         } catch (err) {
             toast.error("Błąd ładowania wspomnień");
+            console.log(err);
         } finally {
             setLoading(false);
         }
@@ -81,11 +89,15 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                         return (
                             <li
                                 key={memory.id}
-                                className="memory-item cursor-pointer hover:shadow-xl transition"
-                                onClick={() => setSelected(memory)}
+                                className={`memory-item relative cursor-pointer hover:shadow-xl transition border-l-4 ${
+                                    isShared ? "border-blue-600" : "border-red-600"
+                                }`}
+                                onClick={() =>
+                                    setSelected({ ...memory, isShared })
+                                }
                             >
                                 <h3 className="text-lg font-semibold text-blue-700 dark:text-white flex items-center gap-2">
-                                {memory.title}
+                                    {memory.title}
                                     {isShared && (
                                         <span className="text-xs bg-gray-200 text-gray-700 rounded-full px-2 py-0.5">
                                             Udostępnione
@@ -109,6 +121,7 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
             {selected && (
                 <MemoryModal
                     memory={selected}
+                    isShared={selected.isShared}
                     onClose={() => setSelected(null)}
                     onDelete={fetchMemories}
                     darkMode={darkMode}

@@ -1,30 +1,40 @@
 import { useState, useRef, useEffect } from "react";
+import Map, { Marker, MapRef } from "react-map-gl";
 import { supabase } from "../supabaseClient";
 import { toast } from "react-toastify";
-import LocationPicker from "./LocationPicker";
-import { MapContainer, Marker, TileLayer } from "react-leaflet";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 export default function MapForm({ darkMode }: { darkMode: boolean }) {
     const [position, setPosition] = useState<[number, number] | null>(null);
+    const [viewState, setViewState] = useState({
+        latitude: 51.1079,
+        longitude: 17.0385,
+        zoom: 13,
+    });
     const [title, setTitle] = useState("");
     const [desc, setDesc] = useState("");
     const [files, setFiles] = useState<File[]>([]);
     const [date, setDate] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
     const titleRef = useRef<HTMLInputElement>(null);
+    const mapRef = useRef<MapRef>(null);
 
     useEffect(() => {
         setTimeout(() => titleRef.current?.focus(), 300);
     }, []);
+
+    const mapStyle = darkMode
+        ? "mapbox://styles/mapbox/dark-v11"
+        : "mapbox://styles/mapbox/outdoors-v12";
 
     const handleSubmit = async () => {
         if (isSubmitting) return;
         setIsSubmitting(true);
 
         const user = (await supabase.auth.getUser()).data.user;
-
-        if (!user || !position || files.length === 0 || !date) {
+        if (!user || !position || files.length === 0 || !date || !title) {
             toast.error("Uzupełnij wszystkie dane, wybierz lokalizację, datę i zdjęcia.");
             setIsSubmitting(false);
             return;
@@ -41,23 +51,27 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
 
         let memory;
         try {
-            const memoryRes = await fetch(`${backendUrl}/memories`, {
+            const res = await fetch(`${backendUrl}/memories`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(memoryPayload),
             });
 
-            if (!memoryRes.ok) {
-                const err = await memoryRes.json();
-                toast.error("Błąd tworzenia wspomnienia: " + err.detail);
-                setIsSubmitting(false);
-                return;
+            if (!res.ok) {
+                const errorData = await res.json();
+                if (errorData?.detail) {
+                    throw { detail: errorData.detail };
+                }
+                throw new Error("Nieznany błąd z API.");
             }
 
-            memory = await memoryRes.json();
+            memory = await res.json();
         } catch (err) {
-            toast.error("Nie udało się połączyć z API.");
-            console.log(err);
+            if (err && typeof err === "object" && "detail" in err) {
+                toast.error("Błąd tworzenia wspomnienia: " + (err as { detail: string }).detail);
+            } else {
+                toast.error("Błąd tworzenia wspomnienia.");
+            }
             setIsSubmitting(false);
             return;
         }
@@ -65,7 +79,6 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
         for (const file of files) {
             const filePath = `${Date.now()}_${file.name}`;
             const { error: uploadErr } = await supabase.storage.from("photos").upload(filePath, file);
-
             if (uploadErr) {
                 toast.error("Błąd uploadu zdjęcia: " + uploadErr.message);
                 continue;
@@ -73,32 +86,17 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
 
             const { data: urlData } = supabase.storage.from("photos").getPublicUrl(filePath);
             const publicUrl = urlData?.publicUrl;
+            if (!publicUrl) continue;
 
-            if (!publicUrl) {
-                toast.error("Brak publicznego URL dla zdjęcia: " + file.name);
-                continue;
-            }
-
-            const photoPayload = {
-                memory_id: memory.id,
-                url: publicUrl,
-                uploaded_by: user.id,
-            };
-
-            try {
-                const photoRes = await fetch(`${backendUrl}/photos`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(photoPayload),
-                });
-
-                if (!photoRes.ok) {
-                    const err = await photoRes.json();
-                    toast.error("Błąd zapisu zdjęcia: " + err.detail);
-                }
-            } catch (err) {
-                toast.error("Błąd komunikacji z API (photos)");
-            }
+            await fetch(`${backendUrl}/photos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    memory_id: memory.id,
+                    url: publicUrl,
+                    uploaded_by: user.id,
+                }),
+            });
         }
 
         toast.success("Wspomnienie zostało dodane.");
@@ -114,65 +112,59 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
         <div className="fade-in space-y-6">
             <h3 className="text-2xl font-bold">Dodaj nowe wspomnienie</h3>
 
-            <div className="card p-0 overflow-hidden">
-                <MapContainer center={[51.1079, 17.0385]} zoom={13} className="leaflet-container">
-                    <TileLayer
-                        url={
-                            darkMode
-                                ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                                : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        }
-                    />
-                    <LocationPicker onSelect={(lat, lng) => setPosition([lat, lng])} />
-                    {position && <Marker position={position} />}
-                </MapContainer>
+            <div className="rounded overflow-hidden">
+                <Map
+                    {...viewState}
+                    onMove={(evt) => setViewState(evt.viewState)}
+                    onClick={(e) => setPosition([e.lngLat.lat, e.lngLat.lng])}
+                    mapboxAccessToken={mapboxToken}
+                    mapStyle={mapStyle}
+                    ref={mapRef}
+                    style={{ height: "800px", width: "100%" }}
+                >
+                    {position && (
+                        <Marker latitude={position[0]} longitude={position[1]}>
+                            <div
+                                style={{
+                                    backgroundColor: "red",
+                                    borderRadius: "50%",
+                                    width: 20,
+                                    height: 20,
+                                    border: "2px solid white",
+                                }}
+                            />
+                        </Marker>
+                    )}
+                </Map>
             </div>
 
             <div className="card space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tytuł</label>
-                    <input
-                        ref={titleRef}
-                        type="text"
-                        placeholder="Nazwij swoje wspomnienie"
-                        className="input"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Data wspomnienia</label>
-                    <input
-                        type="date"
-                        className="input"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Opis</label>
-                    <textarea
-                        placeholder="Opisz swoje wspomnienie"
-                        className="input min-h-[120px]"
-                        value={desc}
-                        onChange={(e) => setDesc(e.target.value)}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Zdjęcia</label>
-                    <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
-                            file:rounded-md file:border-0 file:text-sm file:font-semibold
-                            file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        onChange={(e) => setFiles(Array.from(e.target.files || []))}
-                    />
-                </div>
+                <input
+                    ref={titleRef}
+                    type="text"
+                    placeholder="Tytuł wspomnienia"
+                    className="input"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                />
+                <input
+                    type="date"
+                    className="input"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                />
+                <textarea
+                    placeholder="Opis"
+                    className="input min-h-[120px]"
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                />
+                <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                />
 
                 <button
                     onClick={handleSubmit}
