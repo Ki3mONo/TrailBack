@@ -52,10 +52,10 @@ function App() {
             <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
                 {/* Nagłówek */}
                 <header className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-gray-700">
-                    <div className="flex items-center gap-3">
-                        <img src="/icon.png" alt="TrailBack logo" className="h-12 w-12" />
+                    <a href="/" className="flex items-center gap-3 select-none cursor-pointer self-center">
+                        <img src="/icon.png" className="h-14 w-14" />
                         <h1 className="text-2xl font-bold tracking-tight">TrailBack</h1>
-                    </div>
+                    </a>
 
                     <nav className="flex items-center gap-2 flex-wrap">
                         <button
