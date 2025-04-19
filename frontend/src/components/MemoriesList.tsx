@@ -108,13 +108,15 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
 
     return (
         <div className="fade-in space-y-6 relative">
-            {previewUrl && (
+            {previewUrl && selected && (
                 <ImageModal
                     url={previewUrl}
                     onClose={() => setPreviewUrl(null)}
                     allImages={photos.map((p) => p.url)}
+                    memoryName={selected.title} // ✅ Naprawa: wymagany prop przekazany
                 />
             )}
+
 
             {!previewUrl && (
                 <>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type Props = {
     url: string;
@@ -24,6 +24,7 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName }:
     const hasNext = currentIndex < allImages.length - 1;
 
     const changeImage = (newUrl: string) => {
+        if (isTransitioning) return;
         setIsTransitioning(true);
         setTimeout(() => {
             setCurrent(newUrl);
@@ -34,16 +35,16 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName }:
     const showPrev = () => hasPrev && changeImage(allImages[currentIndex - 1]);
     const showNext = () => hasNext && changeImage(allImages[currentIndex + 1]);
 
-    const handleKey = (e: KeyboardEvent) => {
+    const handleKey = useCallback((e: KeyboardEvent) => {
         if (e.key === "ArrowLeft") showPrev();
         if (e.key === "ArrowRight") showNext();
         if (e.key === "Escape") onClose();
-    };
+    }, [currentIndex, onClose]);
 
     useEffect(() => {
         window.addEventListener("keydown", handleKey);
         return () => window.removeEventListener("keydown", handleKey);
-    });
+    }, [handleKey]);
 
     const handleDownload = async () => {
         try {
@@ -73,8 +74,9 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName }:
         <div
             className="fixed inset-0 z-50 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4"
             onClick={onClose}
+            role="dialog"
+            aria-modal="true"
         >
-            {/* Zamknij */}
             <button
                 onClick={onClose}
                 className="absolute top-4 right-4 text-white bg-white bg-opacity-10 hover:bg-opacity-20 p-3 rounded-full"
@@ -85,7 +87,6 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName }:
                 </svg>
             </button>
 
-            {/* Obraz + strzałki */}
             <div className="relative flex items-center justify-center w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
                 {hasPrev && (
                     <button
@@ -124,12 +125,10 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName }:
                 )}
             </div>
 
-            {/* Numeracja zdjęcia */}
             {allImages.length > 1 && (
                 <div className="mt-4 text-white text-sm">{`Zdjęcie ${currentIndex + 1} z ${allImages.length}`}</div>
             )}
 
-            {/* Pobierz w prawym dolnym rogu */}
             <button
                 onClick={handleDownload}
                 className="absolute bottom-4 right-4 text-white bg-blue-600 px-6 py-3 rounded hover:bg-blue-700 transition"
