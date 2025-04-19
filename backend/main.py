@@ -33,7 +33,8 @@ logger.addHandler(handler)
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_RAW.split(",") if origin.strip()]
 ENV = os.getenv("ENV", "development")
 
 if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
@@ -54,10 +55,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_credentials=True,  # jeśli używasz cookies/tokenów
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ================================
 # MODELE
@@ -128,19 +130,33 @@ def root():
 
 @app.get("/memories", response_model=List[MemoryOut], tags=["Memories"])
 async def get_memories(user_id: str, db: Client = Depends(get_db)):
-    response = db.table("memories").select("*").filter("created_by", "eq", user_id).execute()
-    memories = []
-    for m in response.data:
-        memories.append({
-            "id": m["id"],
-            "title": m["title"],
-            "description": m.get("description"),
-            "lat": m["location"]["coordinates"][1],
-            "lng": m["location"]["coordinates"][0],
-            "created_at": m["created_at"],
-            "created_by": m["created_by"]
-        })
-    return memories
+    try:
+        response = db.table("memories").select("*").filter("created_by", "eq", user_id).execute()
+        memories = []
+
+        for m in response.data:
+            location = m.get("location", {})
+            coordinates = location.get("coordinates", [None, None])
+
+            lng = coordinates[0] if len(coordinates) > 0 else None
+            lat = coordinates[1] if len(coordinates) > 1 else None
+
+            memories.append({
+                "id": m["id"],
+                "title": m["title"],
+                "description": m.get("description"),
+                "lat": lat,
+                "lng": lng,
+                "created_at": m.get("created_at"),
+                "created_by": m["created_by"]
+            })
+
+        return memories
+
+    except Exception as e:
+        logger.error(f"Błąd przy pobieraniu wspomnień: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się pobrać wspomnień")
+
 
 @app.get("/photos", response_model=List[PhotoOut], tags=["Photos"])
 async def get_photos(memory_id: str, db: Client = Depends(get_db)):
@@ -186,24 +202,33 @@ async def list_users(
 # ================================
 @app.post("/memories", response_model=MemoryOut, status_code=201, tags=["Memories"])
 async def create_memory(memory: MemoryCreate, db: Client = Depends(get_db)):
-    point = f"POINT({memory.lng} {memory.lat})"
-    response = db.table("memories").insert({
-        "title": memory.title.strip(),
-        "description": memory.description.strip() if memory.description else None,
-        "location": point,
-        "created_by": memory.created_by,
-        "created_at": memory.created_at  # <-- dodano
-    }).execute()
-    record = response.data[0]
-    return {
-        "id": record["id"],
-        "title": record["title"],
-        "description": record.get("description"),
-        "lat": memory.lat,
-        "lng": memory.lng,
-        "created_at": record["created_at"],
-        "created_by": record["created_by"]
-    }
+    try:
+        location_point = f"POINT({memory.lng} {memory.lat})"
+
+        response = db.table("memories").insert({
+            "title": memory.title.strip(),
+            "description": memory.description.strip() if memory.description else None,
+            "location": location_point,
+            "created_by": memory.created_by,
+            "created_at": memory.created_at.isoformat()
+        }).execute()
+
+        record = response.data[0]
+
+        return {
+            "id": record["id"],
+            "title": record["title"],
+            "description": record.get("description"),
+            "lat": memory.lat,
+            "lng": memory.lng,
+            "created_at": record["created_at"],
+            "created_by": record["created_by"]
+        }
+
+    except Exception as e:
+        logger.error("Błąd podczas zapisu wspomnienia", exc_info=True)
+        raise HTTPException(status_code=500, detail="Nie udało się zapisać wspomnienia")
+
 
 @app.post("/photos", response_model=PhotoOut, status_code=201, tags=["Photos"])
 async def add_photo(photo: PhotoCreate, db: Client = Depends(get_db)):

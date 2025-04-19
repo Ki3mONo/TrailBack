@@ -9,11 +9,11 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
     const [title, setTitle] = useState("");
     const [desc, setDesc] = useState("");
     const [files, setFiles] = useState<File[]>([]);
+    const [date, setDate] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const titleRef = useRef<HTMLInputElement>(null);
 
-    // Autofocus na tytule po renderze
     useEffect(() => {
         setTimeout(() => titleRef.current?.focus(), 300);
     }, []);
@@ -24,8 +24,8 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
 
         const user = (await supabase.auth.getUser()).data.user;
 
-        if (!user || !position || files.length === 0) {
-            alert("Uzupełnij wszystkie dane i wybierz przynajmniej jedno zdjęcie.");
+        if (!user || !position || files.length === 0 || !date) {
+            toast.error("Uzupełnij wszystkie dane, wybierz lokalizację, datę i zdjęcia.");
             setIsSubmitting(false);
             return;
         }
@@ -36,6 +36,7 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
             lat: position[0],
             lng: position[1],
             created_by: user.id,
+            created_at: new Date(date).toISOString(),
         };
 
         let memory;
@@ -48,16 +49,14 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
 
             if (!memoryRes.ok) {
                 const err = await memoryRes.json();
-                console.error("❌ Błąd tworzenia wspomnienia:", err);
-                alert("Błąd tworzenia wspomnienia:\n" + JSON.stringify(err.detail, null, 2));
+                toast.error("Błąd tworzenia wspomnienia: " + err.detail);
                 setIsSubmitting(false);
                 return;
             }
 
             memory = await memoryRes.json();
         } catch (err) {
-            console.error("❌ Błąd komunikacji z API:", err);
-            alert("Nie udało się połączyć z API.");
+            toast.error("Nie udało się połączyć z API.");
             setIsSubmitting(false);
             return;
         }
@@ -67,7 +66,7 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
             const { error: uploadErr } = await supabase.storage.from("photos").upload(filePath, file);
 
             if (uploadErr) {
-                console.error("❌ Błąd uploadu zdjęcia:", uploadErr.message);
+                toast.error("Błąd uploadu zdjęcia: " + uploadErr.message);
                 continue;
             }
 
@@ -75,7 +74,7 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
             const publicUrl = urlData?.publicUrl;
 
             if (!publicUrl) {
-                console.error("❌ Brak publicznego URL dla zdjęcia:", file.name);
+                toast.error("Brak publicznego URL dla zdjęcia: " + file.name);
                 continue;
             }
 
@@ -94,18 +93,19 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
 
                 if (!photoRes.ok) {
                     const err = await photoRes.json();
-                    console.error("❌ Błąd zapisu zdjęcia:", err);
+                    toast.error("Błąd zapisu zdjęcia: " + err.detail);
                 }
             } catch (err) {
-                console.error("❌ Błąd komunikacji z API (photos):", err);
+                toast.error("Błąd komunikacji z API (photos)");
             }
         }
 
-        toast.success("Wspomnienie zostało dodane!");
+        toast.success("Wspomnienie zostało dodane.");
         setTitle("");
         setDesc("");
         setFiles([]);
         setPosition(null);
+        setDate("");
         setIsSubmitting(false);
     };
 
@@ -141,6 +141,16 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
                 </div>
 
                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data wspomnienia</label>
+                    <input
+                        type="date"
+                        className="input"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                    />
+                </div>
+
+                <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Opis</label>
                     <textarea
                         placeholder="Opisz swoje wspomnienie"
@@ -168,7 +178,7 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
                     className="btn-secondary w-full mt-4 disabled:opacity-50"
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? "🔄 Dodawanie..." : "Zapisz wspomnienie"}
+                    {isSubmitting ? "Dodawanie..." : "Zapisz wspomnienie"}
                 </button>
             </div>
         </div>

@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import ImageModal from "./ImageModal";
+import { toast } from "react-toastify";
 
 type Memory = {
     id: string;
@@ -28,57 +29,85 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
     const [photos, setPhotos] = useState<Photo[]>([]);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadingPhotos, setLoadingPhotos] = useState(false);
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-    const formatPolishDate = (dateString:string) => {
+    const formatPolishDate = (dateString: string) => {
+        if (!dateString) return "?";
         const date = new Date(dateString);
-        const dayName = date.toLocaleDateString('pl-PL', { weekday: 'long' });
-        const monthName = date.toLocaleDateString('pl-PL', { month: 'long' });
+        if (isNaN(date.getTime())) return "?";
+
+        const dayName = date.toLocaleDateString("pl-PL", { weekday: "long" });
+        const monthName = date.toLocaleDateString("pl-PL", { month: "long" });
         const day = date.getDate();
         const year = date.getFullYear();
 
         return `${capitalize(dayName)} ${day} ${monthName} ${year}`;
     };
 
-    const capitalize = (str:string) => str.charAt(0).toUpperCase() + str.slice(1);
-
-
+    const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
     useEffect(() => {
         const fetchMemories = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
 
+                if (!user) {
+                    toast.error("Użytkownik niezalogowany.");
+                    return;
+                }
+
+                console.log("➡️ Fetching memories for:", user.id);
                 const res = await fetch(`${backendUrl}/memories?user_id=${user.id}`);
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    console.error("❌ Błąd API memories:", err);
+                    toast.error("Nie udało się pobrać wspomnień.");
+                    return;
+                }
+
                 const data = await res.json();
                 if (Array.isArray(data)) {
                     setMemories(data);
+                } else {
+                    toast.error("Odpowiedź z serwera ma nieprawidłowy format.");
                 }
             } catch (err) {
                 console.error("❌ Błąd pobierania wspomnień:", err);
+                toast.error("Wystąpił błąd podczas pobierania wspomnień.");
             } finally {
                 setLoading(false);
             }
         };
+
         fetchMemories();
     }, [backendUrl]);
 
     const openMemory = async (memory: Memory) => {
         setSelected(memory);
+        setLoadingPhotos(true);
         try {
             const res = await fetch(`${backendUrl}/photos?memory_id=${memory.id}`);
+
+            if (!res.ok) {
+                toast.error("Nie udało się pobrać zdjęć.");
+                return;
+            }
+
             const data = await res.json();
             setPhotos(data);
         } catch (err) {
             console.error("❌ Błąd pobierania zdjęć:", err);
+            toast.error("Wystąpił błąd podczas pobierania zdjęć.");
+        } finally {
+            setLoadingPhotos(false);
         }
     };
 
     return (
         <div className="fade-in space-y-6 relative">
-            {/* Modal zdjęcia */}
             {previewUrl && (
                 <ImageModal
                     url={previewUrl}
@@ -87,7 +116,6 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                 />
             )}
 
-            {/* Lista wspomnień */}
             {!previewUrl && (
                 <>
                     <h2 className="text-2xl font-bold">Twoje wspomnienia</h2>
@@ -115,23 +143,26 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                                 <Marker position={[selected.lat, selected.lng]} />
                             </MapContainer>
 
-                            {/* Galeria */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {photos.map((photo) => (
-                                    <div
-                                        key={photo.id}
-                                        className="relative aspect-[4/3] overflow-hidden rounded shadow-md cursor-zoom-in hover:scale-[1.01] transition-transform"
-                                        onClick={() => setPreviewUrl(photo.url)}
-                                    >
-                                        <img
-                                            src={`${photo.url}?width=600`}
-                                            alt="Wspomnienie"
-                                            loading="lazy"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
+                            {loadingPhotos ? (
+                                <p className="text-sm text-gray-400">Ładowanie zdjęć...</p>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                    {photos.map((photo) => (
+                                        <div
+                                            key={photo.id}
+                                            className="relative aspect-[4/3] overflow-hidden rounded shadow-md cursor-zoom-in hover:scale-[1.01] transition-transform"
+                                            onClick={() => setPreviewUrl(photo.url)}
+                                        >
+                                            <img
+                                                src={`${photo.url}?width=600`}
+                                                alt="Wspomnienie"
+                                                loading="lazy"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <button
                                 onClick={() => setSelected(null)}
@@ -159,7 +190,9 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                                         📍 {memory.lat.toFixed(4)}, {memory.lng.toFixed(4)}
                                     </p>
                                     <p className="text-xs text-gray-400 mt-2">
-                                        {memory.created_at ? formatPolishDate(memory.created_at) : "?"}
+                                        {memory.created_at
+                                            ? formatPolishDate(memory.created_at)
+                                            : "?"}
                                     </p>
                                 </li>
                             ))}
