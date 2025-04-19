@@ -101,12 +101,15 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName }:
 
                 <img
                     key={current}
-                    src={current}
+                    src={`${current}?width=1000&quality=60`}
                     alt="Podgląd zdjęcia"
+                    loading="lazy"
                     className={`rounded max-h-[80vh] w-auto mx-auto shadow-lg transition-opacity duration-300 ${
-                        isTransitioning ? "opacity-0" : "opacity-100"
+                        isTransitioning ? "opacity-0 blur-sm" : "opacity-100"
                     }`}
+                    onLoad={(e) => e.currentTarget.classList.remove("blur-sm")}
                 />
+
 
                 {hasNext && (
                     <button

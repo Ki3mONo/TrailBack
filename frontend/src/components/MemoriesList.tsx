@@ -144,27 +144,29 @@ export default function MemoriesList({ darkMode }: { darkMode: boolean }) {
                             </MapContainer>
 
                             {loadingPhotos ? (
-                                <p className="text-sm text-gray-400">Ładowanie zdjęć...</p>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                    {photos.map((photo) => (
-                                        <div
-                                            key={photo.id}
-                                            className="relative aspect-[4/3] overflow-hidden rounded shadow-md cursor-zoom-in hover:scale-[1.01] transition-transform"
-                                            onClick={() => setPreviewUrl(photo.url)}
-                                        >
-                                            <img
-                                                src={`${photo.url}?width=600`}
-                                                alt="Wspomnienie"
-                                                loading="lazy"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                    <p className="text-sm text-gray-400">Ładowanie zdjęć...</p>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                        {photos.map((photo) => (
+                                            <div
+                                                key={photo.id}
+                                                className="relative aspect-[4/3] overflow-hidden rounded shadow-md cursor-zoom-in hover:scale-[1.01] transition-transform"
+                                                onClick={() => setPreviewUrl(photo.url)}
+                                            >
+                                                <img
+                                                    src={`${photo.url}?width=300&quality=30`}
+                                                    alt="Wspomnienie"
+                                                    loading="lazy"
+                                                    className="w-full h-full object-cover blur-sm opacity-0 transition duration-500"
+                                                    onLoad={(e) => e.currentTarget.classList.remove("blur-sm", "opacity-0")}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
-                            <button
+
+                                <button
                                 onClick={() => setSelected(null)}
                                 className="btn-outline mt-4 w-full"
                             >
