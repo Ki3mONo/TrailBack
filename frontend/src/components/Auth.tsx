@@ -27,7 +27,7 @@ export default function Auth() {
             console.error(error.message);
         } else {
             console.log("Rejestracja pomyślna!", data);
-            window.location.href = "/home";
+            window.location.href = "/";
         }
     };
 
