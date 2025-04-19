@@ -57,6 +57,7 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
             memory = await memoryRes.json();
         } catch (err) {
             toast.error("Nie udało się połączyć z API.");
+            console.log(err);
             setIsSubmitting(false);
             return;
         }
