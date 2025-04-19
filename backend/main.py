@@ -184,7 +184,6 @@ async def list_friends(user_id: str, db: Client = Depends(get_db)):
     response = db.table("friendships") \
         .select("*") \
         .or_(f"user_id.eq.{user_id},friend_id.eq.{user_id}") \
-        .filter("status", "eq", "accepted") \
         .execute()
     return response.data
 
@@ -195,7 +194,7 @@ async def list_users(
     db: Client = Depends(get_db)
 ):
     try:
-        query = db.table("profiles").select("id, username, full_name, avatar_url")
+        query = db.table("profiles").select("id, username, full_name, avatar_url, email")
 
         if search:
             query = query.filter("username", "ilike", f"%{search}%")
@@ -207,9 +206,11 @@ async def list_users(
         filtered_users = [u for u in users if u["id"] != current_user]
 
         return filtered_users
+
     except Exception as e:
         logger.error(f"Error listing users: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Nie udało się pobrać listy użytkowników")
+
 
 @app.get("/photos/{photo_id}", response_model=PhotoOut, tags=["Photos"])
 async def get_photo(photo_id: str, db: Client = Depends(get_db)):
