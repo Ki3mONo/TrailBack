@@ -99,3 +99,14 @@ body {
 .dark .leaflet-container {
     @apply border-gray-600;
 }
+.input {
+    @apply w-full px-4 py-2 rounded border dark:bg-gray-800 dark:border-gray-600 shadow-sm;
+}
+
+.btn {
+    @apply px-4 py-2 rounded font-semibold transition;
+}
+
+.leaflet-container {
+    z-index: 0 !important;
+}

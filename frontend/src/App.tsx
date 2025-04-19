@@ -4,12 +4,14 @@ import { User } from "@supabase/supabase-js";
 import Auth from "./components/Auth";
 import MapForm from "./components/MapForm";
 import MemoriesList from "./components/MemoriesList";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import Community from "./components/Community";
+import Profile from "./components/Profile";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
     const [user, setUser] = useState<User | null>(null);
-    const [view, setView] = useState<"list" | "add">("list");
+    const [view, setView] = useState<"list" | "add" | "community" | "profile">("list");
     const [darkMode, setDarkMode] = useState<boolean>(false);
 
     // Pobranie motywu z localStorage
@@ -42,8 +44,11 @@ function App() {
     if (!user) return <Auth />;
 
     return (
-        <div className={`min-h-screen transition-colors duration-300 
-            ${darkMode ? "bg-[#1e1e20] text-gray-100" : "bg-gray-100 text-gray-800"}`}>
+        <div
+            className={`min-h-screen transition-colors duration-300 ${
+                darkMode ? "bg-[#1e1e20] text-gray-100" : "bg-gray-100 text-gray-800"
+            }`}
+        >
             <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
                 {/* Nagłówek */}
                 <header className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-gray-700">
@@ -52,7 +57,7 @@ function App() {
                         <h1 className="text-2xl font-bold tracking-tight">TrailBack</h1>
                     </div>
 
-                    <nav className="flex items-center gap-2">
+                    <nav className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => setView("list")}
                             className={`nav-link ${view === "list" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
@@ -66,10 +71,16 @@ function App() {
                             ➕ Dodaj
                         </button>
                         <button
-                            onClick={handleLogout}
-                            className="nav-link text-red-500"
+                            onClick={() => setView("community")}
+                            className={`nav-link ${view === "community" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
                         >
-                            🚪 Wyloguj
+                            🤝 Społeczność
+                        </button>
+                        <button
+                            onClick={() => setView("profile")}
+                            className={`nav-link ${view === "profile" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
+                        >
+                            🙋 Mój profil
                         </button>
                         <button
                             onClick={toggleDarkMode}
@@ -78,16 +89,21 @@ function App() {
                         >
                             🌓 {darkMode ? "Jasny" : "Ciemny"}
                         </button>
+                        <button
+                            onClick={handleLogout}
+                            className="nav-link text-red-500"
+                        >
+                            🚪 Wyloguj
+                        </button>
                     </nav>
                 </header>
 
                 {/* Widok */}
                 <main className="fade-in">
-                    {view === "list" ? (
-                        <MemoriesList darkMode={darkMode} />
-                    ) : (
-                        <MapForm darkMode={darkMode} />
-                    )}
+                    {view === "list" && <MemoriesList darkMode={darkMode} />}
+                    {view === "add" && <MapForm darkMode={darkMode} />}
+                    {view === "community" && <Community userId={user.id} />}
+                    {view === "profile" && <Profile user={user} />}
                 </main>
             </div>
             <ToastContainer position="bottom-center" autoClose={3000} />
