@@ -71,13 +71,13 @@ function App() {
                             onClick={() => setView("list")}
                             className={`nav-link ${view === "list" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
                         >
-                            📖 Lista
+                            📖 Wspomnienia
                         </button>
                         <button
                             onClick={() => setView("add")}
                             className={`nav-link ${view === "add" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
                         >
-                            ➕ Dodaj
+                            ➕ Dodaj wspomnienie
                         </button>
                         <button
                             onClick={() => setView("community")}
@@ -93,11 +93,13 @@ function App() {
                         </button>
                         <button
                             onClick={toggleDarkMode}
-                            className="nav-link"
+                            className="nav-link w-[110px] h-[40px] flex items-center justify-center gap-1"
                             title="Przełącz motyw"
                         >
-                            🌓 {darkMode ? "Jasny" : "Ciemny"}
+                            <span>🌓</span>
+                            <span>{darkMode ? "Ciemny" : "Jasny"}</span>
                         </button>
+
                         <button
                             onClick={handleLogout}
                             className="nav-link text-red-500"
