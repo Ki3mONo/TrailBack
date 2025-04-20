@@ -41,6 +41,15 @@ function App() {
         setUser(null);
     };
 
+    useEffect(() => {
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = view === "add" ? "hidden" : "auto";
+    
+        return () => {
+            document.body.style.overflow = originalOverflow;
+        };
+    }, [view]);
+
     if (!user) return <Auth />;
 
     return (
