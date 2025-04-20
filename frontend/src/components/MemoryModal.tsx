@@ -1,29 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import Map, { Marker, MapRef, Source, Layer } from "react-map-gl";
-import { supabase } from "../supabaseClient";
 import ShareMemoryModal from "./ShareMemoryModal";
 import ImageModal from "./ImageModal";
+import MemorySharingInfo from "./MemorySharingInfo";
 import { toast } from "react-toastify";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-type Memory = {
-    id: string;
-    title: string;
-    description?: string;
-    lat: number;
-    lng: number;
-    created_at?: string;
-    created_by?: string;
-    isShared?: boolean;
-};
-
-type Photo = {
-    id: string;
-    memory_id: string;
-    url: string;
-    uploaded_by: string;
-    uploaded_at?: string;
-};
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 export default function MemoryModal({
                                         memory,
@@ -31,20 +15,13 @@ export default function MemoryModal({
                                         onClose,
                                         onDelete,
                                         darkMode,
-                                    }: {
-    memory: Memory;
-    isShared: boolean;
-    onClose: () => void;
-    onDelete: () => void;
-    darkMode: boolean;
-}) {
-    const [photos, setPhotos] = useState<Photo[]>([]);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+                                    }) {
+    const [photos, setPhotos] = useState([]);
+    const [previewUrl, setPreviewUrl] = useState(null);
     const [shareOpen, setShareOpen] = useState(false);
     const [showTrails, setShowTrails] = useState(false);
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
-    const mapRef = useRef<MapRef>(null);
+
+    const mapRef = useRef(null);
 
     const [viewState, setViewState] = useState({
         latitude: memory.lat,
@@ -69,23 +46,23 @@ export default function MemoryModal({
         fetchPhotos();
     }, [memory.id]);
 
-    const getUserOrThrow = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || !user.id) {
-            toast.error("Brak zalogowanego użytkownika");
-            throw new Error("Brak zalogowanego użytkownika");
+    useEffect(() => {
+        if (mapRef.current) {
+            mapRef.current.flyTo({
+                center: [memory.lng, memory.lat],
+                zoom: 8,
+                duration: 1000,
+            });
         }
-        return user;
-    };
+    }, [memory.id]);
 
-    const uploadPhotoViaApi = async (file: File) => {
+    const uploadPhoto = async (file) => {
         try {
-            const user = await getUserOrThrow();
             const formData = new FormData();
             formData.append("file", file);
 
             const res = await fetch(
-                `${backendUrl}/memories/${memory.id}/upload-photo?user_id=${user.id}`,
+                `${backendUrl}/memories/${memory.id}/upload-photo?user_id=${memory.created_by}`,
                 {
                     method: "POST",
                     body: formData,
@@ -100,7 +77,7 @@ export default function MemoryModal({
                         id: crypto.randomUUID(),
                         memory_id: memory.id,
                         url: data.url,
-                        uploaded_by: user.id,
+                        uploaded_by: memory.created_by,
                     },
                 ]);
                 toast.success("Zdjęcie dodane!");
@@ -112,11 +89,10 @@ export default function MemoryModal({
         }
     };
 
-    const deletePhoto = async (photoId: string) => {
+    const deletePhoto = async (photoId) => {
         try {
-            const user = await getUserOrThrow();
             await fetch(
-                `${backendUrl}/memories/${memory.id}/photo/${photoId}?user_id=${user.id}`,
+                `${backendUrl}/memories/${memory.id}/photo/${photoId}?user_id=${memory.created_by}`,
                 { method: "DELETE" }
             );
             toast.success("Usunięto zdjęcie");
@@ -130,8 +106,7 @@ export default function MemoryModal({
         if (!confirm("Na pewno chcesz usunąć wspomnienie?")) return;
 
         try {
-            const user = await getUserOrThrow();
-            await fetch(`${backendUrl}/memories/${memory.id}?user_id=${user.id}`, {
+            await fetch(`${backendUrl}/memories/${memory.id}?user_id=${memory.created_by}`, {
                 method: "DELETE",
             });
             toast.success("Usunięto wspomnienie");
@@ -142,15 +117,6 @@ export default function MemoryModal({
         }
     };
 
-    useEffect(() => {
-        if (mapRef.current) {
-            mapRef.current.flyTo({
-                center: [memory.lng, memory.lat],
-                zoom: 8,
-                duration: 1000,
-            });
-        }
-    }, [memory.id]);
     return (
         <div className="modal-backdrop z-40">
             {previewUrl && (
@@ -180,55 +146,52 @@ export default function MemoryModal({
                     <p className="text-gray-700">{memory.description}</p>
                 )}
 
-                <Map
-                    {...viewState}
-                    onMove={(e) => setViewState(e.viewState)}
-                    mapboxAccessToken={mapboxToken}
-                    mapStyle={mapStyle}
-                    ref={mapRef}
-                    style={{ height: 300, width: "100%", borderRadius: 8 }}
-                >
-                    <Marker latitude={memory.lat} longitude={memory.lng}>
-                        <div
-                            style={{
-                                backgroundColor: isShared ? "#3B82F6" : "#DC2626",
-                                borderRadius: "50%",
-                                width: 16,
-                                height: 16,
-                                border: "2px solid white",
-                            }}
-                        />
-                    </Marker>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Map
+                        {...viewState}
+                        onMove={(e) => setViewState(e.viewState)}
+                        mapboxAccessToken={mapboxToken}
+                        mapStyle={mapStyle}
+                        ref={mapRef}
+                        style={{ height: 300, width: "100%", borderRadius: 8 }}
+                    >
+                        <Marker latitude={memory.lat} longitude={memory.lng}>
+                            <div
+                                style={{
+                                    backgroundColor: isShared ? "#3B82F6" : "#DC2626",
+                                    borderRadius: "50%",
+                                    width: 16,
+                                    height: 16,
+                                    border: "2px solid white",
+                                }}
+                            />
+                        </Marker>
 
-                    {/* Szlaki piesze z Waymarked Trails */}
-                    {showTrails && (
-                        <>
-                            <Source
-                                id="waymarked-hiking"
-                                type="raster"
-                                tiles={["https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png"]}
-                                tileSize={256}
-                            />
-                            <Layer
-                                id="waymarked-hiking-layer"
-                                type="raster"
-                                source="waymarked-hiking"
-                            />
-                        </>
-                    )}
-                    <Layer
-                        id="waymarked-hiking-layer"
-                        type="raster"
-                        source="waymarked-hiking"
+                        {showTrails && (
+                            <>
+                                <Source
+                                    id="waymarked-hiking"
+                                    type="raster"
+                                    tiles={["https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png"]}
+                                    tileSize={256}
+                                />
+                                <Layer
+                                    id="waymarked-hiking-layer"
+                                    type="raster"
+                                    source="waymarked-hiking"
+                                />
+                            </>
+                        )}
+                    </Map>
+
+                    <MemorySharingInfo
+                        memoryId={memory.id}
+                        ownerId={memory.created_by || ""}
                     />
-                </Map>
-
+                </div>
 
                 <div className="flex justify-between items-center mt-2">
-                    <button
-                        className="btn-outline"
-                        onClick={() => setShowTrails(!showTrails)}
-                    >
+                    <button className="btn-outline" onClick={() => setShowTrails(!showTrails)}>
                         {showTrails ? "Ukryj szlaki" : "Pokaż szlaki"}
                     </button>
 
@@ -240,7 +203,7 @@ export default function MemoryModal({
                             className="hidden"
                             onChange={(e) => {
                                 if (e.target.files?.[0]) {
-                                    uploadPhotoViaApi(e.target.files[0]);
+                                    uploadPhoto(e.target.files[0]);
                                     e.target.value = "";
                                 }
                             }}
