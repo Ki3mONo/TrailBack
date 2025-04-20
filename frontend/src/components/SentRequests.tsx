@@ -1,30 +1,45 @@
+import UserItem from "./UserItem";
+
+type User = {
+    id: string;
+    full_name?: string;
+    username?: string;
+    email: string;
+};
+
+type FriendRequest = {
+    friend_id: string;
+};
+
 const SentRequests = ({
                           outgoingRequests,
                           users,
                       }: {
-    outgoingRequests: any[];
-    users: any[];
+    outgoingRequests: FriendRequest[];
+    users: User[];
 }) => {
     if (outgoingRequests.length === 0) return null;
 
     return (
-        <div>
-            <h2 className="text-xl font-semibold mb-2">Wysłane zaproszenia</h2>
-            <ul className="space-y-2">
-                {outgoingRequests.map((req) => {
-                    const receiver = users.find((u) => u.id === req.friend_id);
-                    return receiver ? (
-                        <li key={receiver.id} className="flex justify-between items-center border-b pb-2">
-                            <div>
-                                <p className="font-medium">{receiver.full_name || "Nieznany użytkownik"}</p>
-                                <p className="text-sm text-gray-500">@{receiver.username}</p>
-                                <p className="text-sm text-gray-400">{receiver.email}</p>
-                            </div>
-                            <span className="text-yellow-500 font-medium">⌛ Oczekuje</span>
-                        </li>
-                    ) : null;
-                })}
-            </ul>
+        <div className="space-y-2 h-full flex flex-col">
+            <h2 className="text-xl font-semibold mb-1">Wysłane zaproszenia ({outgoingRequests.length})</h2>
+            <div className="overflow-y-auto h-full pr-1">
+                <ul className="space-y-2">
+                    {outgoingRequests.map((req) => {
+                        const receiver = users.find((u) => u.id === req.friend_id);
+                        return receiver ? (
+                            <UserItem
+                                key={receiver.id}
+                                user={receiver}
+                                isFriend={false}
+                                isPending={true}
+                                onSend={() => {}}
+                                onRemove={() => {}}
+                            />
+                        ) : null;
+                    })}
+                </ul>
+            </div>
         </div>
     );
 };

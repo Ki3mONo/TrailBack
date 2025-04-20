@@ -22,10 +22,10 @@ const Profile = ({ user }: { user: User }) => {
     if (!profile) return <div className="text-center">Ładowanie profilu...</div>;
 
     return (
-        <div className="space-y-6 max-w-md mx-auto text-center">
+        <div className="bg-white dark:bg-[#2a2a2d] p-6 rounded-lg shadow-lg w-full max-w-full text-center space-y-6">
             {/* AVATAR */}
             <div className="flex justify-center">
-                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-300 dark:border-gray-600 shadow-lg">
+                <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-gray-300 dark:border-gray-600 shadow-xl">
                     <img
                         src={profile.avatar_url && profile.avatar_url.trim() !== "" ? profile.avatar_url : "/placeholder-avatar.png"}
                         alt="Podgląd avatar"
@@ -36,7 +36,7 @@ const Profile = ({ user }: { user: User }) => {
 
             {/* INFORMACJE */}
             <div className="space-y-2">
-                <h2 className="text-xl font-bold">{profile.full_name || "Brak imienia"}</h2>
+                <h2 className="text-2xl font-bold">{profile.full_name || "Brak imienia"}</h2>
                 <p className="text-sm text-gray-500">@{profile.username || "Brak nazwy"}</p>
                 <button
                     className="btn mt-4"
@@ -66,6 +66,7 @@ const Profile = ({ user }: { user: User }) => {
             )}
         </div>
     );
+
 };
 
 export default Profile;

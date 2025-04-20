@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import UserItem from "./UserItem";
+import ConfirmationModal from "./ConfirmationModal";
 
 interface User {
     id: string;
@@ -33,10 +34,9 @@ export default function AllUsers({
                                      onSend,
                                      onRefresh,
                                  }: AllUsersProps) {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const [filterText, setFilterText] = useState("");
     const [removeTarget, setRemoveTarget] = useState<User | null>(null);
     const [loadingRemove, setLoadingRemove] = useState(false);
-    const [filterText, setFilterText] = useState("");
 
     const isFriend = (id: string) =>
         friends.some(
@@ -48,36 +48,6 @@ export default function AllUsers({
     const isPendingSent = (id: string) =>
         outgoingRequests.some((f) => f.friend_id === id);
 
-    const removeFriend = async () => {
-        if (!removeTarget) return;
-        setLoadingRemove(true);
-
-        try {
-            const params = new URLSearchParams({
-                user_id: userId,
-                friend_id: removeTarget.id,
-            });
-
-            const res = await fetch(`${backendUrl}/friends/remove?${params.toString()}`, {
-                method: "DELETE",
-            });
-
-            if (!res.ok) throw new Error();
-
-            toast.success("Znajomy został usunięty");
-            setRemoveTarget(null);
-
-            if (typeof onRefresh === "function") {
-                await onRefresh();
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error("Błąd podczas usuwania znajomego");
-        } finally {
-            setLoadingRemove(false);
-        }
-    };
-
     const filteredUsers = users.filter((u) => {
         const search = filterText.toLowerCase();
         return (
@@ -87,8 +57,31 @@ export default function AllUsers({
         );
     });
 
+    const removeFriend = async () => {
+        if (!removeTarget) return;
+        setLoadingRemove(true);
+
+        try {
+            const res = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/friends/remove?user_id=${userId}&friend_id=${removeTarget.id}`,
+                { method: "DELETE" }
+            );
+
+            if (!res.ok) throw new Error("Błąd podczas usuwania znajomego");
+
+            toast.success("Znajomy został usunięty");
+            setRemoveTarget(null);
+            onRefresh();
+        } catch (error) {
+            toast.error("Nie udało się usunąć znajomego");
+            console.error(error);
+        } finally {
+            setLoadingRemove(false);
+        }
+    };
+
     return (
-        <div>
+        <div className="h-full flex flex-col">
             <h2 className="text-xl font-semibold mb-2">Wszyscy użytkownicy</h2>
 
             <div className="relative mb-4">
@@ -98,14 +91,13 @@ export default function AllUsers({
                 <input
                     type="text"
                     placeholder="Szukaj użytkownika..."
-                    className="w-full pl-10 pr-3 py-2 border rounded dark:bg-gray-700 dark:text-white"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
                 />
             </div>
 
-
-            <div className="max-h-96 overflow-y-auto pr-2">
+            <div className="flex-1 overflow-y-auto pr-2">
                 <ul className="space-y-2">
                     {filteredUsers.map((u) => (
                         <UserItem
@@ -115,38 +107,19 @@ export default function AllUsers({
                             isPending={isPendingSent(u.id)}
                             onSend={() => onSend(u.id)}
                             onRemove={() => setRemoveTarget(u)}
+                            disabled={isPendingSent(u.id)}
                         />
                     ))}
                 </ul>
             </div>
 
             {removeTarget && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg max-w-md w-full">
-                        <h3 className="text-lg font-semibold text-center mb-4">Usuń znajomego</h3>
-                        <p className="text-sm text-center mb-6 text-gray-600 dark:text-gray-300">
-                            Czy na pewno chcesz usunąć{" "}
-                            <strong>{removeTarget.full_name || removeTarget.username}</strong>? <br />
-                            Utracisz dostęp do wspólnych wspomnień.
-                        </p>
-
-                        <div className="flex justify-between gap-4">
-                            <button
-                                className="btn-outline w-full"
-                                onClick={() => setRemoveTarget(null)}
-                            >
-                                Anuluj
-                            </button>
-                            <button
-                                className="btn bg-red-600 text-white w-full"
-                                onClick={removeFriend}
-                                disabled={loadingRemove}
-                            >
-                                {loadingRemove ? "Usuwanie..." : "Usuń"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmationModal
+                    message={`Czy na pewno chcesz usunąć ${removeTarget.full_name || removeTarget.username}?`}
+                    onCancel={() => setRemoveTarget(null)}
+                    onConfirm={removeFriend}
+                    loading={loadingRemove}
+                />
             )}
         </div>
     );

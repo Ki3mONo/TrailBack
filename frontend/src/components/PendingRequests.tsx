@@ -1,3 +1,5 @@
+import UserItem from "./UserItem";
+
 type FriendRequest = {
     user_id: string;
 };
@@ -21,25 +23,26 @@ const PendingRequests = ({
     if (incomingRequests.length === 0) return null;
 
     return (
-        <div>
-            <h2 className="text-xl font-semibold mb-2">Oczekujące zaproszenia</h2>
-            <ul className="space-y-2">
-                {incomingRequests.map((req) => {
-                    const sender = users.find((u) => u.id === req.user_id);
-                    return sender ? (
-                        <li key={sender.id} className="flex justify-between items-center border-b pb-2">
-                            <div>
-                                <p className="font-medium">{sender.full_name || "Nieznany użytkownik"}</p>
-                                <p className="text-sm text-gray-500">@{sender.username}</p>
-                                <p className="text-sm text-gray-400">{sender.email}</p>
-                            </div>
-                            <button onClick={() => onAccept(sender.id)} className="btn text-sm">
-                                ✅ Akceptuj
-                            </button>
-                        </li>
-                    ) : null;
-                })}
-            </ul>
+        <div className="space-y-2 h-full flex flex-col">
+            <h2 className="text-xl font-semibold mb-1">Oczekujące zaproszenia ({incomingRequests.length})</h2>
+            <div className="overflow-y-auto h-full pr-1">
+                <ul className="space-y-2">
+                    {incomingRequests.map((req) => {
+                        const sender = users.find((u) => u.id === req.user_id);
+                        return sender ? (
+                            <UserItem
+                                key={sender.id}
+                                user={sender}
+                                isFriend={false}
+                                isPending={false}
+                                onSend={() => onAccept(sender.id)}
+                                onRemove={() => {}}
+                                actionLabel="✅ Akceptuj"
+                            />
+                        ) : null;
+                    })}
+                </ul>
+            </div>
         </div>
     );
 };
