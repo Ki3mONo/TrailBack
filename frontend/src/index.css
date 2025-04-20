@@ -88,7 +88,7 @@ body {
     }
 
     .memory-grid {
-        @apply grid gap-6 sm:grid-cols-1 md:grid-cols-2;
+        @apply grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
     }
 }
 
@@ -102,15 +102,9 @@ body {
     to { opacity: 1; }
 }
 
-/* Mapa */
-.leaflet-container {
-    @apply rounded-lg border border-gray-300 shadow-sm;
-    height: 400px !important;
-}
 
-.dark .leaflet-container {
-    @apply border-gray-600;
-}
+
+
 .input {
     @apply w-full px-4 py-2 rounded border shadow-sm outline-none transition-colors duration-200;
     background-color: var(--card);
@@ -139,6 +133,3 @@ body {
     @apply px-4 py-2 rounded font-semibold transition;
 }
 
-.leaflet-container {
-    z-index: 0 !important;
-}

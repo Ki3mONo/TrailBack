@@ -49,7 +49,7 @@ function App() {
                 darkMode ? "bg-[#1e1e20] text-gray-100" : "bg-gray-100 text-gray-800"
             }`}
         >
-            <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+            <div className="w-full max-w-[1800px] mx-auto px-1 py-5 space-y-5">
                 {/* Nagłówek */}
                 <header className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-gray-700">
                     <a href="/" className="flex items-center gap-3 select-none cursor-pointer self-center">
