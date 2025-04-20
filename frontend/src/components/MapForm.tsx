@@ -41,13 +41,27 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
             return;
         }
 
+        const parsedDate = new Date(date);
+        const now = new Date();
+        if (isNaN(parsedDate.getTime())) {
+            toast.error("Nieprawidłowy format daty.");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (parsedDate > now) {
+            toast.error("Data nie może być z przyszłości.");
+            setIsSubmitting(false);
+            return;
+        }
+
         const memoryPayload = {
             title,
             description: desc,
             lat: position[0],
             lng: position[1],
             created_by: user.id,
-            created_at: new Date(date).toISOString(),
+            created_at: parsedDate.toISOString(),
         };
 
         let memory;
