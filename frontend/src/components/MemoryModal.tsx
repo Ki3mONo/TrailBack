@@ -9,19 +9,43 @@ import "mapbox-gl/dist/mapbox-gl.css";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
+type Memory = {
+    id: string;
+    title: string;
+    description?: string;
+    lat: number;
+    lng: number;
+    created_by: string;
+};
+
+type Photo = {
+    id: string;
+    memory_id: string;
+    url: string;
+    uploaded_by: string;
+};
+
+type Props = {
+    memory: Memory;
+    isShared: boolean;
+    onClose: () => void;
+    onDelete: () => void;
+    darkMode: boolean;
+};
+
 export default function MemoryModal({
                                         memory,
                                         isShared,
                                         onClose,
                                         onDelete,
                                         darkMode,
-                                    }) {
-    const [photos, setPhotos] = useState([]);
-    const [previewUrl, setPreviewUrl] = useState(null);
+                                    }: Props) {
+    const [photos, setPhotos] = useState<Photo[]>([]);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [shareOpen, setShareOpen] = useState(false);
     const [showTrails, setShowTrails] = useState(false);
 
-    const mapRef = useRef(null);
+    const mapRef = useRef<MapRef | null>(null);
 
     const [viewState, setViewState] = useState({
         latitude: memory.lat,
@@ -56,7 +80,7 @@ export default function MemoryModal({
         }
     }, [memory.id]);
 
-    const uploadPhoto = async (file) => {
+    const uploadPhoto = async (file: File) => {
         try {
             const formData = new FormData();
             formData.append("file", file);
@@ -89,7 +113,7 @@ export default function MemoryModal({
         }
     };
 
-    const deletePhoto = async (photoId) => {
+    const deletePhoto = async (photoId: string) => {
         try {
             await fetch(
                 `${backendUrl}/memories/${memory.id}/photo/${photoId}?user_id=${memory.created_by}`,
@@ -189,7 +213,7 @@ export default function MemoryModal({
                     </div>
 
                     <div className="md:col-span-1">
-                        <MemorySharingInfo memoryId={memory.id} ownerId={memory.created_by || ""} />
+                        <MemorySharingInfo memoryId={memory.id} ownerId={memory.created_by} />
                     </div>
                 </div>
 
