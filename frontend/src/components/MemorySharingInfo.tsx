@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { supabase } from "../supabaseClient";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -24,12 +23,10 @@ export default function MemorySharingInfo({ memoryId, ownerId }: { memoryId: str
     useEffect(() => {
         const loadSharingData = async () => {
             try {
-                // 👤 Pobierz właściciela
                 const ownerRes = await fetch(`${backendUrl}/profile?user_id=${ownerId}`);
                 const ownerData: FriendProfile = await ownerRes.json();
                 setOwner(ownerData);
 
-                // 📤 Pobierz udostępnienia
                 const sharesRes = await fetch(`${backendUrl}/memories/${memoryId}/shares`);
                 const shares: ShareRecord[] = await sharesRes.json();
 
@@ -42,7 +39,6 @@ export default function MemorySharingInfo({ memoryId, ownerId }: { memoryId: str
                     return;
                 }
 
-                // 📦 Pobierz profile użytkowników, którym właściciel udostępnił
                 const profilesRes = await fetch(`${backendUrl}/users?current_user=${ownerId}`);
                 const allProfiles: FriendProfile[] = await profilesRes.json();
                 const filtered = allProfiles.filter(u => onlyOwnerShares.includes(u.id));
@@ -57,9 +53,9 @@ export default function MemorySharingInfo({ memoryId, ownerId }: { memoryId: str
     }, [memoryId, ownerId]);
 
     return (
-        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded shadow-sm space-y-4 mt-4">
+        <div className="h-[400px] bg-[var(--card)] p-4 rounded-xl shadow flex flex-col space-y-4">
             {owner && (
-                <div>
+                <div className="shrink-0">
                     <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">Właściciel:</h4>
                     <div className="flex items-center gap-3">
                         <img
@@ -75,11 +71,11 @@ export default function MemorySharingInfo({ memoryId, ownerId }: { memoryId: str
                 </div>
             )}
 
-            {sharedWith.length > 0 && (
-                <div>
-                    <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">Udostępniono dla:</h4>
-                    <ul className="space-y-2">
-                        {sharedWith.map((user) => (
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">Udostępniono dla:</h4>
+                <ul className="flex-1 overflow-y-auto pr-1 overscroll-bounce scrollbar-thin space-y-2">
+                    {sharedWith.length > 0 ? (
+                        sharedWith.map((user) => (
                             <li key={user.id} className="flex items-center gap-3">
                                 <img
                                     src={user.avatar_url || "/placeholder-avatar.png"}
@@ -91,10 +87,12 @@ export default function MemorySharingInfo({ memoryId, ownerId }: { memoryId: str
                                     <p className="text-xs text-gray-500">@{user.username}</p>
                                 </div>
                             </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+                        ))
+                    ) : (
+                        <li className="text-sm text-gray-500 italic">Brak udostępnień</li>
+                    )}
+                </ul>
+            </div>
         </div>
     );
 }

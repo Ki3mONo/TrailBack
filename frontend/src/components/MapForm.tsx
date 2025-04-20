@@ -2,14 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import Map, { Marker, MapRef } from "react-map-gl";
 import { supabase } from "../supabaseClient";
 import { toast } from "react-toastify";
+import LocationSearch from "./LocationSearch";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 export default function MapForm({ darkMode }: { darkMode: boolean }) {
     const [position, setPosition] = useState<[number, number] | null>(null);
     const [viewState, setViewState] = useState({
-        latitude: 51.1079,
-        longitude: 17.0385,
-        zoom: 13,
+        latitude: 50.0647,
+        longitude: 19.945,
+        zoom: 6,
     });
     const [title, setTitle] = useState("");
     const [desc, setDesc] = useState("");
@@ -59,19 +60,12 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
 
             if (!res.ok) {
                 const errorData = await res.json();
-                if (errorData?.detail) {
-                    throw { detail: errorData.detail };
-                }
-                throw new Error("Nieznany błąd z API.");
+                throw { detail: errorData?.detail || "Nieznany błąd z API." };
             }
 
             memory = await res.json();
-        } catch (err) {
-            if (err && typeof err === "object" && "detail" in err) {
-                toast.error("Błąd tworzenia wspomnienia: " + (err as { detail: string }).detail);
-            } else {
-                toast.error("Błąd tworzenia wspomnienia.");
-            }
+        } catch (err: any) {
+            toast.error("Błąd: " + (err?.detail || "Nie udało się zapisać wspomnienia"));
             setIsSubmitting(false);
             return;
         }
@@ -109,40 +103,56 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
     };
 
     return (
-        <div className="fade-in space-y-6">
-            <h3 className="text-2xl font-bold">Dodaj nowe wspomnienie</h3>
-
-            <div className="rounded overflow-hidden">
-                <Map
-                    {...viewState}
-                    onMove={(evt) => setViewState(evt.viewState)}
-                    onClick={(e) => setPosition([e.lngLat.lat, e.lngLat.lng])}
-                    mapboxAccessToken={mapboxToken}
-                    mapStyle={mapStyle}
-                    ref={mapRef}
-                    style={{ height: "800px", width: "100%" }}
-                >
-                    {position && (
-                        <Marker latitude={position[0]} longitude={position[1]}>
-                            <div
-                                style={{
-                                    backgroundColor: "red",
-                                    borderRadius: "50%",
-                                    width: 20,
-                                    height: 20,
-                                    border: "2px solid white",
-                                }}
-                            />
-                        </Marker>
-                    )}
-                </Map>
+        <div className="relative w-full h-[calc(100vh-88px)] overflow-hidden">
+            {/* Mapa */}
+            <div className="absolute inset-0 z-0 px-4">
+                <div className="w-full h-[90%] rounded-xl overflow-hidden shadow">
+                    <Map
+                        {...viewState}
+                        onMove={(evt) => setViewState(evt.viewState)}
+                        onClick={(e) => setPosition([e.lngLat.lat, e.lngLat.lng])}
+                        mapboxAccessToken={mapboxToken}
+                        mapStyle={mapStyle}
+                        ref={mapRef}
+                        style={{ width: "100%", height: "100%" }}
+                    >
+                        {position && (
+                            <Marker latitude={position[0]} longitude={position[1]}>
+                                <div
+                                    style={{
+                                        backgroundColor: "red",
+                                        borderRadius: "50%",
+                                        width: 20,
+                                        height: 20,
+                                        border: "2px solid white",
+                                    }}
+                                />
+                            </Marker>
+                        )}
+                    </Map>
+                </div>
             </div>
 
-            <div className="card space-y-4">
+            {/* Szukajka po lewej */}
+            <LocationSearch
+                mapboxToken={mapboxToken}
+                onSelect={(lat, lng) => {
+                    mapRef.current?.flyTo({
+                        center: [lng, lat],
+                        zoom: 12,
+                        duration: 1000,
+                    });
+                    setPosition([lat, lng]);
+                }}
+            />
+
+            {/* Formularz po prawej */}
+            <div className="absolute top-2 right-6 z-10 w-[22%] h-[50%] bg-[var(--card)] p-4 rounded-xl shadow-lg flex flex-col space-y-3 overflow-auto">
+                <h3 className="text-lg font-semibold">Dodaj wspomnienie</h3>
                 <input
                     ref={titleRef}
                     type="text"
-                    placeholder="Tytuł wspomnienia"
+                    placeholder="Tytuł"
                     className="input"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -155,7 +165,7 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
                 />
                 <textarea
                     placeholder="Opis"
-                    className="input min-h-[120px]"
+                    className="input min-h-[80px]"
                     value={desc}
                     onChange={(e) => setDesc(e.target.value)}
                 />
@@ -165,13 +175,21 @@ export default function MapForm({ darkMode }: { darkMode: boolean }) {
                     accept="image/*"
                     onChange={(e) => setFiles(Array.from(e.target.files || []))}
                 />
-
+                <input
+                    type="text"
+                    className="input"
+                    placeholder="Lokalizacja wskaźnika"
+                    value={
+                        position ? `${position[0].toFixed(5)}, ${position[1].toFixed(5)}` : ""
+                    }
+                    readOnly
+                />
                 <button
                     onClick={handleSubmit}
-                    className="btn-secondary w-full mt-4 disabled:opacity-50"
+                    className="btn-secondary mt-auto disabled:opacity-50"
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? "Dodawanie..." : "Zapisz wspomnienie"}
+                    {isSubmitting ? "Zapisywanie..." : "Zapisz wspomnienie"}
                 </button>
             </div>
         </div>
