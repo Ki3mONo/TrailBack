@@ -146,49 +146,54 @@ export default function MemoryModal({
                     <p className="text-gray-700">{memory.description}</p>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Map
-                        {...viewState}
-                        onMove={(e) => setViewState(e.viewState)}
-                        mapboxAccessToken={mapboxToken}
-                        mapStyle={mapStyle}
-                        ref={mapRef}
-                        style={{ height: 300, width: "100%", borderRadius: 8 }}
-                    >
-                        <Marker latitude={memory.lat} longitude={memory.lng}>
-                            <div
-                                style={{
-                                    backgroundColor: isShared ? "#3B82F6" : "#DC2626",
-                                    borderRadius: "50%",
-                                    width: 16,
-                                    height: 16,
-                                    border: "2px solid white",
-                                }}
-                            />
-                        </Marker>
 
-                        {showTrails && (
-                            <>
-                                <Source
-                                    id="waymarked-hiking"
-                                    type="raster"
-                                    tiles={["https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png"]}
-                                    tileSize={256}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="col-span-2">
+                        <Map
+                            {...viewState}
+                            onMove={(e) => setViewState(e.viewState)}
+                            mapboxAccessToken={mapboxToken}
+                            mapStyle={mapStyle}
+                            ref={mapRef}
+                            style={{ height: 300, width: "100%", borderRadius: 8 }}
+                        >
+                            <Marker latitude={memory.lat} longitude={memory.lng}>
+                                <div
+                                    style={{
+                                        backgroundColor: isShared ? "#3B82F6" : "#DC2626",
+                                        borderRadius: "50%",
+                                        width: 16,
+                                        height: 16,
+                                        border: "2px solid white",
+                                    }}
                                 />
-                                <Layer
-                                    id="waymarked-hiking-layer"
-                                    type="raster"
-                                    source="waymarked-hiking"
-                                />
-                            </>
-                        )}
-                    </Map>
+                            </Marker>
 
-                    <MemorySharingInfo
-                        memoryId={memory.id}
-                        ownerId={memory.created_by || ""}
-                    />
+                            {showTrails && (
+                                <>
+                                    <Source
+                                        id="waymarked-hiking"
+                                        type="raster"
+                                        tiles={["https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png"]}
+                                        tileSize={256}
+                                    />
+                                    <Layer
+                                        id="waymarked-hiking-layer"
+                                        type="raster"
+                                        source="waymarked-hiking"
+                                    />
+                                </>
+                            )}
+                            <Layer id="waymarked-hiking-layer" type="raster" source="waymarked-hiking" />
+                        </Map>
+                    </div>
+
+                    <div className="col-span-1">
+                        <MemorySharingInfo memoryId={memory.id}
+                                           ownerId={memory.created_by || ""} />
+                    </div>
                 </div>
+
 
                 <div className="flex justify-between items-center mt-2">
                     <button className="btn-outline" onClick={() => setShowTrails(!showTrails)}>
