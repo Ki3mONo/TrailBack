@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import axios from "axios";
+import Cropper from "react-easy-crop";
+import { Area } from "react-easy-crop";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -14,31 +16,70 @@ type Props = {
     onSaved: () => void;
 };
 
+const getCroppedImg = async (imageSrc: string, croppedAreaPixels: Area): Promise<Blob> => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise((resolve) => (image.onload = resolve));
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No canvas context");
+
+    canvas.width = croppedAreaPixels.width;
+    canvas.height = croppedAreaPixels.height;
+
+    ctx.drawImage(
+        image,
+        croppedAreaPixels.x,
+        croppedAreaPixels.y,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height,
+        0,
+        0,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height
+    );
+
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+        }, "image/jpeg");
+    });
+};
+
 const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
     const [form, setForm] = useState({ ...initial });
-    const [avatarFile, setAvatarFile] = useState<File | null>(null);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(initial.avatar_url || "/placeholder-avatar.png");
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
     const overlayRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (avatarFile) {
-            const url = URL.createObjectURL(avatarFile);
-            setAvatarPreview(url);
-            return () => URL.revokeObjectURL(url);
-        } else {
-            setAvatarPreview(initial.avatar_url || "/placeholder-avatar.png");
+    const onCropComplete = (_: Area, croppedPixels: Area) => {
+        setCroppedAreaPixels(croppedPixels);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            setImageUrl(URL.createObjectURL(file));
         }
-    }, [avatarFile, initial.avatar_url]);
+    };
 
     const handleSave = async () => {
         try {
+            // Aktualizacja danych tekstowych
             await axios.put(`${API_BASE}/profile`, form, {
                 params: { user_id: userId },
             });
 
-            if (avatarFile) {
+            if (selectedFile && croppedAreaPixels && imageUrl) {
+                const croppedBlob = await getCroppedImg(imageUrl, croppedAreaPixels);
                 const fd = new FormData();
-                fd.append("file", avatarFile);
+                fd.append("file", croppedBlob, "avatar.jpg");
                 fd.append("user_id", userId);
 
                 await axios.post(`${API_BASE}/profile/avatar`, fd, {
@@ -46,8 +87,8 @@ const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
                 });
             }
 
-            onSaved(); // odśwież profil
-            onClose(); // zamknij modal
+            onSaved();
+            onClose();
         } catch (err) {
             console.error("Błąd zapisu profilu:", err);
             alert("Nie udało się zapisać profilu.");
@@ -55,9 +96,7 @@ const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
     };
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.target === overlayRef.current) {
-            onClose();
-        }
+        if (e.target === overlayRef.current) onClose();
     };
 
     return (
@@ -66,26 +105,73 @@ const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
             onClick={handleOverlayClick}
             className="fixed inset-0 z-50 bg-black/50 flex justify-center items-center"
         >
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 relative">
                 <h2 className="text-xl font-bold mb-4 text-center">Edytuj profil</h2>
 
-                <div className="flex flex-col items-center gap-4 mb-4">
-                    <div className="w-28 h-28 rounded-full overflow-hidden shadow border border-gray-300 dark:border-gray-600">
-                        <img
-                            src={avatarPreview || "/placeholder-avatar.png"}
-                            alt="Podgląd avatar"
-                            className="object-cover w-full h-full"
+                {/* Avatar + przycinanie */}
+                {imageUrl ? (
+                    <div className="relative w-full aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        <Cropper
+                            image={imageUrl}
+                            crop={crop}
+                            zoom={zoom}
+                            aspect={1}
+                            showGrid={false}
+                            cropShape="round"
+                            onCropChange={setCrop}
+                            onZoomChange={setZoom}
+                            onCropComplete={onCropComplete}
                         />
                     </div>
+                ) : (
+                    <div className="flex flex-col items-center gap-4 mb-4">
+                        <div className="w-28 h-28 rounded-full overflow-hidden shadow border dark:border-gray-600">
+                            <img
+                                src={initial.avatar_url || "/placeholder-avatar.png"}
+                                alt="Avatar"
+                                className="object-cover w-full h-full"
+                            />
+                        </div>
+                    </div>
+                )}
 
-                    <input
-                        type="file"
-                        accept="image/png, image/jpeg"
-                        onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
-                    />
+                {imageUrl && (
+                    <div className="my-2">
+                        <label className="block text-sm mb-1">Zoom:</label>
+                        <input
+                            type="range"
+                            min={1}
+                            max={3}
+                            step={0.1}
+                            value={zoom}
+                            onChange={(e) => setZoom(Number(e.target.value))}
+                            className="w-full"
+                        />
+                    </div>
+                )}
+
+                <div className="mb-4">
+                    <label className="block w-full">
+                        <div className="w-full">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                id="file-upload"
+                            />
+                            <label
+                                htmlFor="file-upload"
+                                className="cursor-pointer w-full block text-center py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                            >
+                                📷 Wybierz nowe zdjęcie
+                            </label>
+                        </div>
+                    </label>
                 </div>
 
-                <div className="space-y-3">
+                {/* Formularz */}
+                <div className="space-y-3 mb-4">
                     <input
                         className="input"
                         placeholder="Imię i nazwisko"
@@ -100,20 +186,21 @@ const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
                     />
                 </div>
 
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="grid grid-cols-2 gap-2 mt-6">
                     <button
                         onClick={onClose}
-                        className="btn border bg-gray-200 dark:bg-gray-700"
+                        className="w-full py-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition"
                     >
                         ✖ Anuluj
                     </button>
                     <button
                         onClick={handleSave}
-                        className="btn bg-blue-600 text-white hover:bg-blue-700"
+                        className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                     >
                         💾 Zapisz
                     </button>
                 </div>
+
             </div>
         </div>
     );
