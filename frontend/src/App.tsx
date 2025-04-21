@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { User } from "@supabase/supabase-js";
 import Auth from "./components/Auth";
-import MapForm from "./components/MapForm";
-import MemoriesList from "./components/MemoriesList";
-import Social from "./components/Social"; // 👈 NOWY komponent
+import Social from "./components/Social";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import MemoryMapView from "./components/MemoryMapView";
 
 function App() {
     const [user, setUser] = useState<User | null>(null);
-    const [view, setView] = useState<"list" | "add" | "social">("list");
+    const [view, setView] = useState<"map" | "social">("map");
     const [darkMode, setDarkMode] = useState<boolean>(false);
 
     useEffect(() => {
@@ -37,17 +36,6 @@ function App() {
         setUser(null);
     };
 
-    useEffect(() => {
-        const originalOverflow = document.body.style.overflow;
-
-        const shouldBlockScroll = view === "add" || view === "social";
-        document.body.style.overflow = shouldBlockScroll ? "hidden" : "auto";
-
-        return () => {
-            document.body.style.overflow = originalOverflow;
-        };
-    }, [view]);
-
     if (!user) return <Auth />;
 
     return (
@@ -56,7 +44,7 @@ function App() {
                 darkMode ? "bg-[#1e1e20] text-gray-100" : "bg-gray-100 text-gray-800"
             }`}
         >
-            <div className="w-full max-w-[1800px] mx-auto px-1 py-5 space-y-5">
+            <div className="w-full max-w-[1800px] mx-auto px-1 pt-2 pb-5 space-y-4">
                 <header className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-gray-700">
                     <a href="/" className="flex items-center gap-3 select-none cursor-pointer self-center">
                         <img src="/icon.png" className="h-14 w-14" />
@@ -65,16 +53,10 @@ function App() {
 
                     <nav className="flex items-center gap-2 flex-wrap">
                         <button
-                            onClick={() => setView("list")}
-                            className={`nav-link ${view === "list" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
+                            onClick={() => setView("map")}
+                            className={`nav-link ${view === "map" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
                         >
-                            📖 Wspomnienia
-                        </button>
-                        <button
-                            onClick={() => setView("add")}
-                            className={`nav-link ${view === "add" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
-                        >
-                            ➕ Dodaj wspomnienie
+                            🗺️ Mapa wspomnień
                         </button>
                         <button
                             onClick={() => setView("social")}
@@ -100,11 +82,11 @@ function App() {
                 </header>
 
                 <main className="fade-in">
-                    {view === "list" && <MemoriesList darkMode={darkMode} />}
-                    {view === "add" && <MapForm darkMode={darkMode} />}
+                    {view === "map" && <MemoryMapView darkMode={darkMode} />}
                     {view === "social" && <Social user={user} />}
                 </main>
             </div>
+
             <ToastContainer position="bottom-center" autoClose={3000} />
         </div>
     );
