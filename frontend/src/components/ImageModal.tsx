@@ -64,12 +64,6 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName, o
         link.remove();
     };
 
-    const confirmDelete = () => {
-        if (!onDelete) return;
-        if (confirm("Czy na pewno usunąć zdjęcie?")) {
-            onDelete(current);
-        }
-    };
 
     return (
         <div
