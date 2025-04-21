@@ -11,6 +11,7 @@ function App() {
     const [user, setUser] = useState<User | null>(null);
     const [view, setView] = useState<"map" | "social">("map");
     const [darkMode, setDarkMode] = useState<boolean>(false);
+    const [menuOpen, setMenuOpen] = useState<boolean>(false);
 
     useEffect(() => {
         const storedTheme = localStorage.getItem("theme");
@@ -44,41 +45,82 @@ function App() {
                 darkMode ? "bg-[#1e1e20] text-gray-100" : "bg-gray-100 text-gray-800"
             }`}
         >
-            <div className="w-full max-w-[1800px] mx-auto px-1 pt-2 pb-5 space-y-4">
-                <header className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-gray-700">
-                    <a href="/" className="flex items-center gap-3 select-none cursor-pointer self-center">
-                        <img src="/icon.png" className="h-14 w-14" />
-                        <h1 className="text-2xl font-bold tracking-tight">TrailBack</h1>
-                    </a>
+            <div className="w-full max-w-[1900px] mx-auto px-3 sm:px-6 pt-2 pb-5 space-y-4">
+                <header className="pb-4 border-b border-gray-300 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <a href="/" className="flex items-center gap-3 select-none cursor-pointer">
+                            <img src="/icon.png" className="h-14 w-14" />
+                            <h1 className="text-2xl font-bold tracking-tight">TrailBack</h1>
+                        </a>
 
-                    <nav className="flex items-center gap-2 flex-wrap">
+                        {/* Mobile menu toggle button */}
                         <button
-                            onClick={() => setView("map")}
-                            className={`nav-link ${view === "map" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
+                            onClick={() => setMenuOpen((prev) => !prev)}
+                            className="sm:hidden nav-link"
                         >
-                            🗺️ Mapa wspomnień
+                            ☰
                         </button>
-                        <button
-                            onClick={() => setView("social")}
-                            className={`nav-link ${view === "social" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
-                        >
-                            🧑‍🤝‍🧑 Społeczność
-                        </button>
-                        <button
-                            onClick={toggleDarkMode}
-                            className="nav-link w-[110px] h-[40px] flex items-center justify-center gap-1"
-                            title="Przełącz motyw"
-                        >
-                            <span>🌓</span>
-                            <span>{darkMode ? "Ciemny" : "Jasny"}</span>
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className="nav-link text-red-500"
-                        >
-                            🚪 Wyloguj
-                        </button>
-                    </nav>
+
+                        {/* Desktop nav */}
+                        <nav className="hidden sm:flex items-center gap-2 flex-wrap">
+                            <button
+                                onClick={() => setView("map")}
+                                className={`nav-link ${view === "map" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
+                            >
+                                🗺️ Mapa wspomnień
+                            </button>
+                            <button
+                                onClick={() => setView("social")}
+                                className={`nav-link ${view === "social" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
+                            >
+                                🧑‍🤝‍🧑 Społeczność
+                            </button>
+                            <button
+                                onClick={toggleDarkMode}
+                                className="nav-link w-[110px] h-[40px] flex items-center justify-center gap-1"
+                                title="Przełącz motyw"
+                            >
+                                <span>🌓</span>
+                                <span>{darkMode ? "Ciemny" : "Jasny"}</span>
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="nav-link text-red-500"
+                            >
+                                🚪 Wyloguj
+                            </button>
+                        </nav>
+                    </div>
+
+                    {/* Mobile nav */}
+                    {menuOpen && (
+                        <nav className="flex flex-col gap-2 mt-4 sm:hidden">
+                            <button
+                                onClick={() => { setView("map"); setMenuOpen(false); }}
+                                className={`nav-link ${view === "map" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
+                            >
+                                🗺️ Mapa wspomnień
+                            </button>
+                            <button
+                                onClick={() => { setView("social"); setMenuOpen(false); }}
+                                className={`nav-link ${view === "social" ? "bg-gray-200 dark:bg-gray-700" : ""}`}
+                            >
+                                🧑‍🤝‍🧑 Społeczność
+                            </button>
+                            <button
+                                onClick={() => { toggleDarkMode(); setMenuOpen(false); }}
+                                className="nav-link"
+                            >
+                                🌓 {darkMode ? "Ciemny" : "Jasny"}
+                            </button>
+                            <button
+                                onClick={() => { handleLogout(); setMenuOpen(false); }}
+                                className="nav-link text-red-500"
+                            >
+                                🚪 Wyloguj
+                            </button>
+                        </nav>
+                    )}
                 </header>
 
                 <main className="fade-in">
