@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import Map, { Marker, MapRef, Source, Layer } from "react-map-gl";
-import ShareMemoryModal from "./ShareMemoryModal";
+import { useEffect, useState } from "react";
 import ImageModal from "./ImageModal";
+import ShareMemoryModal from "./ShareMemoryModal";
+import EditMemoryModal from "./EditMemoryModal";
 import MemorySharingInfo from "./MemorySharingInfo";
+import PhotoUploadModal from "./PhotoUploadModal";
 import { toast } from "react-toastify";
-import "mapbox-gl/dist/mapbox-gl.css";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
-const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 type Memory = {
     id: string;
@@ -30,7 +29,6 @@ type Props = {
     isShared: boolean;
     onClose: () => void;
     onDelete: () => void;
-    darkMode: boolean;
 };
 
 export default function MemoryModal({
@@ -38,80 +36,26 @@ export default function MemoryModal({
                                         isShared,
                                         onClose,
                                         onDelete,
-                                        darkMode,
                                     }: Props) {
     const [photos, setPhotos] = useState<Photo[]>([]);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [shareOpen, setShareOpen] = useState(false);
-    const [showTrails, setShowTrails] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [photoModalOpen, setPhotoModalOpen] = useState(false);
 
-    const mapRef = useRef<MapRef | null>(null);
-
-    const [viewState, setViewState] = useState({
-        latitude: memory.lat,
-        longitude: memory.lng,
-        zoom: 8,
-    });
-
-    const mapStyle = darkMode
-        ? "mapbox://styles/mapbox/dark-v11"
-        : "mapbox://styles/mapbox/outdoors-v12";
-
-    useEffect(() => {
-        const fetchPhotos = async () => {
-            try {
-                const res = await fetch(`${backendUrl}/photos?memory_id=${memory.id}`);
-                const data = await res.json();
-                setPhotos(Array.isArray(data) ? data : []);
-            } catch {
-                toast.error("Błąd ładowania zdjęć");
-            }
-        };
-        fetchPhotos();
-    }, [memory.id]);
-
-    useEffect(() => {
-        if (mapRef.current) {
-            mapRef.current.flyTo({
-                center: [memory.lng, memory.lat],
-                zoom: 8,
-                duration: 1000,
-            });
-        }
-    }, [memory.id]);
-
-    const uploadPhoto = async (file: File) => {
+    const fetchPhotos = async () => {
         try {
-            const formData = new FormData();
-            formData.append("file", file);
-
-            const res = await fetch(
-                `${backendUrl}/memories/${memory.id}/upload-photo?user_id=${memory.created_by}`,
-                {
-                    method: "POST",
-                    body: formData,
-                }
-            );
-
-            if (res.ok) {
-                const data = await res.json();
-                setPhotos((prev) => [
-                    ...prev,
-                    {
-                        id: crypto.randomUUID(),
-                        memory_id: memory.id,
-                        url: data.url,
-                        uploaded_by: memory.created_by,
-                    },
-                ]);
-                toast.success("Zdjęcie dodane!");
-            } else {
-                toast.error("Błąd przesyłania zdjęcia");
-            }
-        } catch (err) {
-            console.error(err);
+            const res = await fetch(`${backendUrl}/photos?memory_id=${memory.id}`);
+            const data = await res.json();
+            setPhotos(Array.isArray(data) ? data : []);
+        } catch {
+            toast.error("Błąd ładowania zdjęć");
         }
     };
+
+    useEffect(() => {
+        fetchPhotos();
+    }, [memory.id]);
 
     const deletePhoto = async (photoId: string) => {
         try {
@@ -142,7 +86,7 @@ export default function MemoryModal({
     };
 
     return (
-        <div className="modal-backdrop z-40">
+        <div className="p-6 space-y-6">
             {previewUrl && (
                 <ImageModal
                     url={previewUrl}
@@ -164,117 +108,101 @@ export default function MemoryModal({
                 />
             )}
 
-            <div className="modal-content space-y-5">
-                <h3 className="text-xl font-semibold">{memory.title}</h3>
-                {memory.description && (
-                    <p className="text-gray-700">{memory.description}</p>
+            {editOpen && (
+                <EditMemoryModal
+                    memoryId={memory.id}
+                    initialTitle={memory.title}
+                    initialDescription={memory.description}
+                    userId={memory.created_by}
+                    onClose={() => setEditOpen(false)}
+                    onSave={(title, desc) => {
+                        memory.title = title;
+                        memory.description = desc;
+                    }}
+                />
+            )}
+
+            {photoModalOpen && (
+                <PhotoUploadModal
+                    memoryId={memory.id}
+                    userId={memory.created_by}
+                    onClose={() => setPhotoModalOpen(false)}
+                    onUploaded={fetchPhotos}
+                />
+            )}
+
+            {/* Nagłówek */}
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">{memory.title}</h2>
+                {isShared && (
+                    <span className="bg-gray-200 text-gray-700 text-sm font-medium px-3 py-1 rounded-full">
+            Udostępnione
+          </span>
                 )}
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-5">
-                    <div className="md:col-span-5 h-[400px]">
-                        <div className="w-full h-full rounded-xl overflow-hidden shadow">
-                            <Map
-                                {...viewState}
-                                onMove={(e) => setViewState(e.viewState)}
-                                mapboxAccessToken={mapboxToken}
-                                mapStyle={mapStyle}
-                                ref={mapRef}
-                                style={{ width: "100%", height: "100%" }}
+            {memory.description && (
+                <p className="text-gray-700 dark:text-gray-200">{memory.description}</p>
+            )}
+
+            {/* Zdjęcia + Sharing info */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="md:col-span-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-1">
+                        {photos.map((photo) => (
+                            <div
+                                key={photo.id}
+                                className="relative aspect-[4/3] overflow-hidden rounded shadow-md cursor-zoom-in group"
+                                onClick={() => setPreviewUrl(photo.url)}
                             >
-                                <Marker latitude={memory.lat} longitude={memory.lng}>
-                                    <div
-                                        style={{
-                                            backgroundColor: isShared ? "#3B82F6" : "#DC2626",
-                                            borderRadius: "50%",
-                                            width: 16,
-                                            height: 16,
-                                            border: "2px solid white",
-                                        }}
-                                    />
-                                </Marker>
-
-                                {showTrails && (
-                                    <>
-                                        <Source
-                                            id="waymarked-hiking"
-                                            type="raster"
-                                            tiles={["https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png"]}
-                                            tileSize={256}
-                                        />
-                                        <Layer
-                                            id="waymarked-hiking-layer"
-                                            type="raster"
-                                            source="waymarked-hiking"
-                                        />
-                                    </>
-                                )}
-                            </Map>
-                        </div>
-                    </div>
-
-                    <div className="md:col-span-1">
-                        <MemorySharingInfo memoryId={memory.id} ownerId={memory.created_by} />
+                                <img
+                                    src={`${photo.url}?width=300&quality=30`}
+                                    alt="Zdjęcie"
+                                    className="w-full h-full object-cover blur-sm opacity-0 transition duration-500"
+                                    onLoad={(e) =>
+                                        e.currentTarget.classList.remove("blur-sm", "opacity-0")
+                                    }
+                                />
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        deletePhoto(photo.id);
+                                    }}
+                                    className="absolute top-1 right-1 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                                >
+                                    Usuń
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center mt-1">
-                    <button className="btn-outline" onClick={() => setShowTrails(!showTrails)}>
-                        {showTrails ? "Ukryj szlaki" : "Pokaż szlaki"}
+                <div className="md:col-span-1 min-w-[180px]">
+                    <MemorySharingInfo memoryId={memory.id} ownerId={memory.created_by} />
+                </div>
+            </div>
+
+            {/* Akcje */}
+            <div className="flex justify-between items-center mt-4">
+                <button className="btn-outline" onClick={onClose}>
+                    Powrót
+                </button>
+
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setPhotoModalOpen(true)} className="btn-outline">
+                        Dodaj zdjęcia
                     </button>
 
-                    <label className="btn cursor-pointer">
-                        ➕ Dodaj zdjęcie
-                        <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                                if (e.target.files?.[0]) {
-                                    uploadPhoto(e.target.files[0]);
-                                    e.target.value = "";
-                                }
-                            }}
-                        />
-                    </label>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {photos.map((photo) => (
-                        <div
-                            key={photo.id}
-                            className="relative aspect-[4/3] overflow-hidden rounded shadow-md cursor-zoom-in group"
-                            onClick={() => setPreviewUrl(photo.url)}
-                        >
-                            <img
-                                src={`${photo.url}?width=300&quality=30`}
-                                alt="Zdjęcie"
-                                className="w-full h-full object-cover blur-sm opacity-0 transition duration-500"
-                                onLoad={(e) =>
-                                    e.currentTarget.classList.remove("blur-sm", "opacity-0")
-                                }
-                            />
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    deletePhoto(photo.id);
-                                }}
-                                className="absolute top-1 right-1 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
-                            >
-                                Usuń
-                            </button>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="flex justify-between gap-2">
-                    <button onClick={onClose} className="btn-outline">
-                        ← Powrót
+                    <button onClick={() => setEditOpen(true)} className="btn-outline">
+                        Edytuj wspomnienie
                     </button>
+
                     <button onClick={() => setShareOpen(true)} className="btn-outline">
                         Udostępnij
                     </button>
+
                     <button onClick={deleteMemory} className="btn bg-red-600 text-white">
-                        Usuń wspomnienie
+                        Usuń
                     </button>
                 </div>
             </div>
