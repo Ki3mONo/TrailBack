@@ -276,6 +276,20 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                 >
                     {showTrails ? "Ukryj szlaki turystyczne" : "Pokaż szlaki turystyczne"}
                 </button>
+                <button
+                    className="bg-white dark:bg-gray-800 px-6 py-2 rounded-xl shadow-md text-sm font-medium ml-2"
+                    onClick={() => {
+                        mapRef.current?.flyTo({
+                            center: [19.945, 50.0647],
+                            zoom: 6,
+                            bearing: 0,
+                            pitch: 0,
+                            essential: true,
+                        });
+                    }}
+                >
+                    Resetuj widok mapy
+                </button>
             </div>
         </div>
     );
