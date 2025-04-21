@@ -15,7 +15,9 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName, o
     useEffect(() => {
         setCurrent(url);
         document.body.style.overflow = "hidden";
-        return () => { document.body.style.overflow = ""; };
+        return () => {
+            document.body.style.overflow = "";
+        };
     }, [url]);
 
     const currentIndex = allImages.findIndex((u) => u === current);
@@ -34,11 +36,14 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName, o
     const showPrev = () => hasPrev && changeImage(allImages[currentIndex - 1]);
     const showNext = () => hasNext && changeImage(allImages[currentIndex + 1]);
 
-    const handleKey = useCallback((e: KeyboardEvent) => {
-        if (e.key === "ArrowLeft") showPrev();
-        if (e.key === "ArrowRight") showNext();
-        if (e.key === "Escape") onClose();
-    }, [currentIndex, onClose]);
+    const handleKey = useCallback(
+        (e: KeyboardEvent) => {
+            if (e.key === "ArrowLeft") showPrev();
+            if (e.key === "ArrowRight") showNext();
+            if (e.key === "Escape") onClose();
+        },
+        [currentIndex, onClose]
+    );
 
     useEffect(() => {
         window.addEventListener("keydown", handleKey);
@@ -126,7 +131,10 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName, o
                     Pobierz
                 </button>
                 {onDelete && (
-                    <button onClick={confirmDelete} className="btn bg-red-600 text-white">
+                    <button
+                        onClick={() => onDelete(current)}
+                        className="btn bg-red-600 text-white"
+                    >
                         Usuń
                     </button>
                 )}
