@@ -12,11 +12,9 @@ interface FriendListProps {
 export default function FriendList({ friends }: FriendListProps) {
     return (
         <div className="w-full flex flex-col border-t pt-4 h-[300px]">
-            {/* Nagłówek - nie scrollowalny */}
             <h3 className="text-lg font-semibold text-center">👥 Znajomi</h3>
 
-            {/* Lista - scrollowalna część */}
-            <div className="flex-1 overflow-y-auto mt-2 px-2">
+            <div className="h-[240px] overflow-y-auto mt-2 px-2">
                 {friends.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center">Brak znajomych</p>
                 ) : (
@@ -46,3 +44,4 @@ export default function FriendList({ friends }: FriendListProps) {
         </div>
     );
 }
+
