@@ -29,6 +29,7 @@ type Props = {
     isShared: boolean;
     onClose: () => void;
     onDelete: () => void;
+    currentUserId: string; // 🧠 TU jest poprawka
 };
 
 export default function MemoryModal({
@@ -36,6 +37,7 @@ export default function MemoryModal({
                                         isShared,
                                         onClose,
                                         onDelete,
+                                        currentUserId,
                                     }: Props) {
     const [photos, setPhotos] = useState<Photo[]>([]);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -59,14 +61,25 @@ export default function MemoryModal({
 
     const deletePhoto = async (photoId: string) => {
         try {
-            await fetch(
-                `${backendUrl}/memories/${memory.id}/photo/${photoId}?user_id=${memory.created_by}`,
+            const res = await fetch(
+                `${backendUrl}/photos/${photoId}?user_id=${currentUserId}`,
                 { method: "DELETE" }
             );
-            toast.success("Usunięto zdjęcie");
+
+            if (!res.ok) {
+                if (res.status === 403) {
+                    toast.error("Możesz usuwać tylko swoje zdjęcia.");
+                } else {
+                    toast.error("Błąd usuwania zdjęcia.");
+                }
+                return;
+            }
+
             setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-        } catch {
-            toast.error("Błąd usuwania zdjęcia");
+            toast.success("Usunięto zdjęcie");
+        } catch (error) {
+            console.error(error);
+            toast.error("Błąd sieci podczas usuwania zdjęcia.");
         }
     };
 
@@ -74,14 +87,25 @@ export default function MemoryModal({
         if (!confirm("Na pewno chcesz usunąć wspomnienie?")) return;
 
         try {
-            await fetch(`${backendUrl}/memories/${memory.id}?user_id=${memory.created_by}`, {
+            const res = await fetch(`${backendUrl}/memories/${memory.id}?user_id=${currentUserId}`, {
                 method: "DELETE",
             });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                if (res.status === 403 && errorData.detail) {
+                    toast.error(errorData.detail);
+                } else {
+                    toast.error("Błąd usuwania wspomnienia");
+                }
+                return;
+            }
+
             toast.success("Usunięto wspomnienie");
             onClose();
             onDelete();
         } catch {
-            toast.error("Błąd usuwania wspomnienia");
+            toast.error("Błąd sieci podczas usuwania wspomnienia");
         }
     };
 
@@ -113,11 +137,12 @@ export default function MemoryModal({
                     memoryId={memory.id}
                     initialTitle={memory.title}
                     initialDescription={memory.description}
-                    userId={memory.created_by}
+                    userId={currentUserId}
                     onClose={() => setEditOpen(false)}
                     onSave={(title, desc) => {
                         memory.title = title;
                         memory.description = desc;
+                        toast.success("Wspomnienie zaktualizowane");
                     }}
                 />
             )}
@@ -125,7 +150,7 @@ export default function MemoryModal({
             {photoModalOpen && (
                 <PhotoUploadModal
                     memoryId={memory.id}
-                    userId={memory.created_by}
+                    userId={currentUserId}
                     onClose={() => setPhotoModalOpen(false)}
                     onUploaded={fetchPhotos}
                 />
@@ -136,8 +161,8 @@ export default function MemoryModal({
                 <h2 className="text-2xl font-bold">{memory.title}</h2>
                 {isShared && (
                     <span className="bg-gray-200 text-gray-700 text-sm font-medium px-3 py-1 rounded-full">
-            Udostępnione
-          </span>
+                        Udostępnione
+                    </span>
                 )}
             </div>
 
@@ -145,7 +170,7 @@ export default function MemoryModal({
                 <p className="text-gray-700 dark:text-gray-200">{memory.description}</p>
             )}
 
-            {/* Zdjęcia + Sharing info */}
+            {/* Zdjęcia */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                 <div className="md:col-span-4">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-1">
@@ -193,7 +218,16 @@ export default function MemoryModal({
                         Dodaj zdjęcia
                     </button>
 
-                    <button onClick={() => setEditOpen(true)} className="btn-outline">
+                    <button
+                        onClick={() => {
+                            if (isShared) {
+                                toast.error("Nie masz uprawnień do edycji wspomnienia.");
+                                return;
+                            }
+                            setEditOpen(true);
+                        }}
+                        className="btn-outline"
+                    >
                         Edytuj wspomnienie
                     </button>
 

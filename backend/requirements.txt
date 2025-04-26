@@ -1,6 +1,10 @@
-fastapi
-uvicorn
-supabase
-python-dotenv
-shapely
-python-multipart
+fastapi>=0.111.0,<1.0.0
+uvicorn[standard]>=0.29.0,<1.0.0
+supabase>=2.0.0,<3.0.0
+sqlmodel>=0.0.7,<1.0.0
+python-dotenv>=1.0.1,<2.0.0
+pydantic>=2.6.4,<3.0.0
+pydantic-settings>=2.2.1,<3.0.0
+python-multipart>=0.0.7,<0.1.0
+shapely>=2.0.4,<2.1.0
+numpy>=1.26.4,<2.0.0

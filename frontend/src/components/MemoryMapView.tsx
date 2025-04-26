@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import Map, { Marker, MapRef, ViewState, Source, Layer } from "react-map-gl";
+import * as mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import LocationSearch from "./LocationSearch";
 import MemoryForm from "./MemoryForm";
@@ -30,6 +31,7 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
     const [hoveredMemoryId, setHoveredMemoryId] = useState<string | null>(null);
     const [position, setPosition] = useState<[number, number] | null>(null);
     const [showTrails, setShowTrails] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     const [viewState, setViewState] = useState<ViewState>({
         latitude: 50.0647,
@@ -50,6 +52,8 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return toast.error("Użytkownik niezalogowany");
 
+            setCurrentUserId(user.id); // 🛠️ Zapamiętaj userId
+
             const own = await fetch(`${backendUrl}/memories?user_id=${user.id}`).then(res => res.json());
             const shared = await fetch(`${backendUrl}/memories/shared?user_id=${user.id}`).then(res => res.json());
 
@@ -69,6 +73,7 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
             console.error(err);
         }
     };
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") setSelectedMemory(null);
@@ -146,8 +151,8 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                             </Marker>
                         ))}
 
-                    {/* Elegancki tooltip */}
-                    {hoveredMemoryId && mode === "list" && mapRef.current && (() => {
+                    {/* Tooltip */}
+                    {hoveredMemoryId && mapRef.current && (() => {
                         const mem = memories.find((m) => m.id === hoveredMemoryId);
                         if (!mem) return null;
                         return (
@@ -160,7 +165,7 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                         );
                     })()}
 
-                    {/* Szlaki turystyczne */}
+                    {/* Szlaki */}
                     {showTrails && (
                         <>
                             <Source
@@ -176,18 +181,19 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
             </div>
 
             {/* Modal wspomnienia */}
-            {selectedMemory && (
+            {selectedMemory && currentUserId && (
                 <div
                     className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-                    onClick={() => setSelectedMemory(null)} // ⬅️ kliknięcie poza
+                    onClick={() => setSelectedMemory(null)}
                 >
                     <div
                         className="bg-white dark:bg-[#2a2a2d] max-w-5xl w-full rounded-xl shadow-lg overflow-hidden"
-                        onClick={(e) => e.stopPropagation()} // ⬅️ nie zamyka, jeśli klikniesz modal
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <MemoryModal
                             memory={selectedMemory}
                             isShared={selectedMemory.isShared}
+                            currentUserId={currentUserId} // ✅ tu bez błędu
                             onClose={() => setSelectedMemory(null)}
                             onDelete={() => {
                                 setMemories(memories.filter(m => m.id !== selectedMemory.id));
@@ -198,7 +204,7 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                 </div>
             )}
 
-            {/* Górny przełącznik trybu */}
+            {/* Przełącznik trybu */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30">
                 <div className="bg-white dark:bg-gray-800 p-1 rounded-full shadow-md flex">
                     <button
@@ -272,7 +278,7 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
                 <button
                     className="bg-white dark:bg-gray-800 px-6 py-2 rounded-xl shadow-md text-sm font-medium"
-                    onClick={() => setShowTrails((prev) => !prev)}
+                    onClick={() => setShowTrails(prev => !prev)}
                 >
                     {showTrails ? "Ukryj szlaki turystyczne" : "Pokaż szlaki turystyczne"}
                 </button>
