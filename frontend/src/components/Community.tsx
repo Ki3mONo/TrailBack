@@ -1,111 +1,64 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { toast } from "react-toastify";
-
+import { useEffect } from "react";
+import { useSocial } from "../hooks/useSocial";
+import { socialService } from "../services/socialService";
 import PendingRequests from "./PendingRequests";
 import SentRequests from "./SentRequests";
 import AllUsers from "./AllUsers";
-
-// Typ aplikacyjnego użytkownika
-export type AppUser = {
-    id: string;
-    full_name?: string;
-    username?: string;
-    email: string;
-    avatar_url?: string;
-};
-
-type Friendship = {
-    user_id: string;
-    friend_id: string;
-    status: "pending" | "accepted";
-};
+import { AppUser } from "../types/types";
+import { toast } from "react-toastify";
 
 interface CommunityProps {
     userId: string;
-    onFriendsLoaded: React.Dispatch<React.SetStateAction<AppUser[]>>;
+    onFriendsLoaded: (friends: AppUser[]) => void;
 }
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
-
 const Community = ({ userId, onFriendsLoaded }: CommunityProps) => {
-    const [users, setUsers] = useState<AppUser[]>([]);
-    const [friends, setFriends] = useState<Friendship[]>([]);
-    const [incomingRequests, setIncomingRequests] = useState<Friendship[]>([]);
-    const [outgoingRequests, setOutgoingRequests] = useState<Friendship[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshKey, setRefreshKey] = useState(0); // 👈 trigger do ponownego załadowania
-
-    const loadRelations = async () => {
-        setLoading(true);
-        try {
-            const friendsRes = await axios.get<Friendship[]>(`${API_BASE}/friends`, {
-                params: { user_id: userId },
-            });
-
-            const usersRes = await axios.get<AppUser[]>(`${API_BASE}/users`, {
-                params: { current_user: userId },
-            });
-
-            const allRelations = friendsRes.data;
-            const accepted = allRelations.filter(f => f.status === "accepted");
-
-            const friendIds = accepted.map(f =>
-                f.user_id === userId ? f.friend_id : f.user_id
-            );
-
-            const myFriends = usersRes.data.filter(u => friendIds.includes(u.id));
-
-            setFriends(accepted);
-            setIncomingRequests(allRelations.filter(f => f.status === "pending" && f.friend_id === userId));
-            setOutgoingRequests(allRelations.filter(f => f.status === "pending" && f.user_id === userId));
-            setUsers(usersRes.data);
-            onFriendsLoaded(myFriends); // 👈 przekazujemy znajomych do listy w profilu
-        } catch (err) {
-            console.error("❌ Błąd podczas ładowania:", err);
-            toast.error("Nie udało się załadować społeczności");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const {
+        users,
+        friends,
+        incomingRequests,
+        outgoingRequests,
+        loading,
+        triggerRefresh,
+    } = useSocial(userId);
 
     useEffect(() => {
-        loadRelations();
-    }, [userId, refreshKey]);
+        if (users.length && friends.length) {
+            const myFriends = users.filter((u) =>
+                friends.some((f) => f.user_id === u.id || f.friend_id === u.id)
+            );
+            onFriendsLoaded(myFriends);
+        }
+    }, [users, friends, onFriendsLoaded]);
 
-    const triggerRefresh = () => setRefreshKey(k => k + 1);
-
-    const sendRequest = async (friendId: string) => {
+    const sendRequest = async (friendId: string): Promise<void> => {
         try {
-            await axios.post(`${API_BASE}/friends/request`, null, {
-                params: { user_id: userId, friend_id: friendId },
-            });
+            await socialService.sendFriendRequest(userId, friendId);
             toast.success("Zaproszenie wysłane!");
             triggerRefresh();
-        } catch (err) {
-            console.error("Błąd przy wysyłaniu zaproszenia:", err);
+        } catch (error) {
+            console.error(error);
             toast.error("Błąd przy wysyłaniu zaproszenia");
         }
     };
 
-    const acceptRequest = async (fromUserId: string) => {
+    const acceptRequest = async (fromUserId: string): Promise<void> => {
         try {
-            await axios.post(`${API_BASE}/friends/accept`, null, {
-                params: { user_id: userId, friend_id: fromUserId },
-            });
-            toast.success("Znajomość zaakceptowana");
+            await socialService.acceptFriendRequest(userId, fromUserId);
+            toast.success("Znajomość zaakceptowana!");
             triggerRefresh();
-        } catch (err) {
-            console.error("Błąd przy akceptowaniu zaproszenia:", err);
-            toast.error("Nie udało się zaakceptować zaproszenia");
+        } catch (error) {
+            console.error(error);
+            toast.error("Błąd przy akceptowaniu zaproszenia");
         }
     };
 
-    if (loading) return <p>Ładowanie...</p>;
+    if (loading) {
+        return <p className="text-center mt-10">Ładowanie społeczności...</p>;
+    }
 
     return (
         <div className="flex flex-col flex-1 min-h-0 space-y-4 overflow-hidden">
-            {/* Oczekujące zaproszenia */}
             {incomingRequests.length > 0 && (
                 <div className="h-28 overflow-y-auto pr-1">
                     <PendingRequests
@@ -116,7 +69,6 @@ const Community = ({ userId, onFriendsLoaded }: CommunityProps) => {
                 </div>
             )}
 
-            {/* Wysłane zaproszenia */}
             {outgoingRequests.length > 0 && (
                 <div className="h-28 overflow-y-auto pr-1">
                     <SentRequests
@@ -126,7 +78,6 @@ const Community = ({ userId, onFriendsLoaded }: CommunityProps) => {
                 </div>
             )}
 
-            {/* Wszyscy użytkownicy */}
             <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                 <AllUsers
                     users={users}

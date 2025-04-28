@@ -1,15 +1,10 @@
-import { useState } from "react";
+// /src/components/social/UserItem.tsx
 
-interface User {
-    id: string;
-    username?: string;
-    full_name?: string;
-    email?: string;
-    avatar_url?: string;
-}
+import { useState } from "react";
+import { AppUser } from "../types/types";
 
 interface Props {
-    user: User;
+    user: AppUser;
     isFriend: boolean;
     isPending: boolean;
     onSend: () => void;
@@ -56,12 +51,12 @@ export default function UserItem({
                     onClick={isFriend ? onRemove : onSend}
                     disabled={disabled || isPending}
                     className={`
-                        w-full px-3 py-1 text-sm text-center rounded-lg transition
-                        ${isFriend ? "bg-gray-100 dark:bg-gray-700 text-red-500 hover:bg-gray-200 dark:hover:bg-gray-600" : ""}
-                        ${isPending ? "bg-gray-100 dark:bg-gray-700 text-yellow-500 cursor-default" : ""}
-                        ${!isFriend && !isPending && !disabled ? "bg-gray-100 dark:bg-gray-700 text-purple-600 hover:bg-gray-200 dark:hover:bg-gray-600" : ""}
-                        ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-                    `}
+            w-full px-3 py-1 text-sm text-center rounded-lg transition
+            ${isFriend ? "bg-gray-100 dark:bg-gray-700 text-red-500 hover:bg-gray-200 dark:hover:bg-gray-600" : ""}
+            ${isPending ? "bg-gray-100 dark:bg-gray-700 text-yellow-500 cursor-default" : ""}
+            ${!isFriend && !isPending && !disabled ? "bg-gray-100 dark:bg-gray-700 text-purple-600 hover:bg-gray-200 dark:hover:bg-gray-600" : ""}
+            ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+          `}
                 >
                     {isFriend && "🗑️ Usuń"}
                     {isPending && "⏳ Zaproszony"}

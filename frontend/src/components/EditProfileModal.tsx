@@ -71,15 +71,19 @@ const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
 
     const handleSave = async () => {
         try {
-            // Aktualizacja danych tekstowych
+            // Najpierw aktualizujemy dane tekstowe (imię, nazwa użytkownika)
             await axios.put(`${API_BASE}/profile`, form, {
                 params: { user_id: userId },
             });
 
+            // Jeśli wybrano nowe zdjęcie - uploaduj
             if (selectedFile && croppedAreaPixels && imageUrl) {
                 const croppedBlob = await getCroppedImg(imageUrl, croppedAreaPixels);
                 const fd = new FormData();
-                fd.append("file", croppedBlob, "avatar.jpg");
+
+                // ⏰ Dodajemy timestamp lub losowy suffix do nazwy avatara
+                const uniqueSuffix = Date.now(); // Możesz też użyć Math.random()
+                fd.append("file", croppedBlob, `avatar_${uniqueSuffix}.jpg`);
                 fd.append("user_id", userId);
 
                 await axios.post(`${API_BASE}/profile/avatar`, fd, {

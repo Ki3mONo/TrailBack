@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { User } from "@supabase/supabase-js";
+import { User as SupabaseUser } from "@supabase/supabase-js";
 import EditProfileModal from "./EditProfileModal";
+import axios from "axios";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
-const Profile = ({ user }: { user: User }) => {
+const Profile = ({ user }: { user: SupabaseUser }) => {
     const [profile, setProfile] = useState<any>(null);
     const [showEdit, setShowEdit] = useState(false);
 
-    useEffect(() => {
-        const fetchProfile = async () => {
+    const fetchProfile = async () => {
+        try {
             const res = await axios.get(`${API_BASE}/profile`, {
                 params: { user_id: user.id },
             });
             setProfile(res.data);
-        };
+        } catch (error) {
+            console.error("Błąd podczas pobierania profilu:", error);
+        }
+    };
+
+    useEffect(() => {
         fetchProfile();
     }, [user.id]);
 
@@ -27,8 +32,8 @@ const Profile = ({ user }: { user: User }) => {
             <div className="flex justify-center">
                 <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-gray-300 dark:border-gray-600 shadow-xl">
                     <img
-                        src={profile.avatar_url && profile.avatar_url.trim() !== "" ? profile.avatar_url : "/placeholder-avatar.png"}
-                        alt="Podgląd avatar"
+                        src={profile.avatar_url?.trim() ? profile.avatar_url : "/placeholder-avatar.png"}
+                        alt="Avatar"
                         className="object-cover w-full h-full"
                     />
                 </div>
@@ -56,17 +61,11 @@ const Profile = ({ user }: { user: User }) => {
                         avatar_url: profile.avatar_url,
                     }}
                     onClose={() => setShowEdit(false)}
-                    onSaved={async () => {
-                        const res = await axios.get(`${API_BASE}/profile`, {
-                            params: { user_id: user.id },
-                        });
-                        setProfile(res.data);
-                    }}
+                    onSaved={fetchProfile}
                 />
             )}
         </div>
     );
-
 };
 
 export default Profile;

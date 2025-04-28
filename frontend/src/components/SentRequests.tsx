@@ -1,28 +1,21 @@
+// /src/components/social/SentRequests.tsx
+
+import { AppUser, FriendRequest } from "../types/types";
 import UserItem from "./UserItem";
 
-type User = {
-    id: string;
-    full_name?: string;
-    username?: string;
-    email: string;
-};
-
-type FriendRequest = {
-    friend_id: string;
-};
-
-const SentRequests = ({
-                          outgoingRequests,
-                          users,
-                      }: {
+interface SentRequestsProps {
     outgoingRequests: FriendRequest[];
-    users: User[];
-}) => {
+    users: AppUser[];
+}
+
+export default function SentRequests({ outgoingRequests, users }: SentRequestsProps) {
     if (outgoingRequests.length === 0) return null;
 
     return (
         <div className="space-y-2 h-full flex flex-col">
-            <h2 className="text-xl font-semibold mb-1">Wysłane zaproszenia ({outgoingRequests.length})</h2>
+            <h2 className="text-xl font-semibold mb-1">
+                Wysłane zaproszenia ({outgoingRequests.length})
+            </h2>
             <div className="overflow-y-auto h-full pr-1">
                 <ul className="space-y-2">
                     {outgoingRequests.map((req) => {
@@ -42,6 +35,4 @@ const SentRequests = ({
             </div>
         </div>
     );
-};
-
-export default SentRequests;
+}
