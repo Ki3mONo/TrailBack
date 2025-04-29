@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSocial } from "../../hooks/useSocial.ts";
+import { useSocial } from "../../hooks/social/useSocial.ts";
 import { socialService } from "../../services/socialService.ts";
 import PendingRequests from "./PendingRequests.tsx";
 import SentRequests from "./SentRequests.tsx";

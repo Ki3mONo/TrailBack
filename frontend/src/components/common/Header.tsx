@@ -23,7 +23,7 @@ const Header: FC<HeaderProps> = ({
         <header className="pb-4 border-b border-gray-300 dark:border-gray-700">
             <div className="flex items-center justify-between">
                 {/* Logo */}
-                <a href="/public" className="flex items-center gap-3 select-none cursor-pointer">
+                <a href="/" className="flex items-center gap-3 select-none cursor-pointer">
                     <img src="/icon.png" className="h-14 w-14" alt="TrailBack Logo" />
                     <h1 className="text-2xl font-bold tracking-tight">TrailBack</h1>
                 </a>

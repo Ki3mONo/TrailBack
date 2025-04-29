@@ -1,31 +1,13 @@
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
-
-type Memory = {
-    id: string;
-    title: string;
-    lat: number;
-    lng: number;
-    created_at?: string;
-    created_by: string;
-    isShared: boolean;
-};
+import { Memory } from "../../types/types";
+import { formatPolishDate } from "../../utils/formatPolishDate";
 
 export default function MemoriesList({
-
                                          memories,
                                          onSelect,
                                      }: {
-
     memories: Memory[];
     onSelect?: (memory: Memory) => void;
 }) {
-    const formatPolishDate = (dateString?: string) => {
-        if (!dateString) return "?";
-        const date = new Date(dateString);
-        return format(date, "EEEE d MMMM yyyy", { locale: pl });
-    };
-
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold">Twoje wspomnienia</h2>

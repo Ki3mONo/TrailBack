@@ -1,54 +1,38 @@
-import { useEffect, useState, useCallback } from "react";
+import { useRef } from "react";
+import { useImageModal } from "../../hooks/memory/useImageModal.ts";
+import { ImageModalProps } from "../../types/types";
 
-type Props = {
-    url: string;
-    onClose: () => void;
-    allImages?: string[];
-    memoryName: string;
-    onDelete?: (url: string) => void;
-};
+export default function ImageModal({
+                                       url,
+                                       onClose,
+                                       allImages = [],
+                                       memoryName,
+                                       onDelete,
+                                   }: ImageModalProps) {
+    const {
+        current,
+        isTransitioning,
+        currentIndex,
+        hasPrev,
+        hasNext,
+        showPrev,
+        showNext,
+        handleSwipe,
+    } = useImageModal(url, allImages, onClose);
 
-export default function ImageModal({ url, onClose, allImages = [], memoryName, onDelete }: Props) {
-    const [current, setCurrent] = useState(url);
-    const [isTransitioning, setIsTransitioning] = useState(false);
+    const touchStartX = useRef<number | null>(null);
 
-    useEffect(() => {
-        setCurrent(url);
-        document.body.style.overflow = "hidden";
-        return () => {
-            document.body.style.overflow = "";
-        };
-    }, [url]);
-
-    const currentIndex = allImages.findIndex((u) => u === current);
-    const hasPrev = currentIndex > 0;
-    const hasNext = currentIndex < allImages.length - 1;
-
-    const changeImage = (newUrl: string) => {
-        if (isTransitioning) return;
-        setIsTransitioning(true);
-        setTimeout(() => {
-            setCurrent(newUrl);
-            setIsTransitioning(false);
-        }, 200);
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
     };
 
-    const showPrev = () => hasPrev && changeImage(allImages[currentIndex - 1]);
-    const showNext = () => hasNext && changeImage(allImages[currentIndex + 1]);
-
-    const handleKey = useCallback(
-        (e: KeyboardEvent) => {
-            if (e.key === "ArrowLeft") showPrev();
-            if (e.key === "ArrowRight") showNext();
-            if (e.key === "Escape") onClose();
-        },
-        [currentIndex, onClose]
-    );
-
-    useEffect(() => {
-        window.addEventListener("keydown", handleKey);
-        return () => window.removeEventListener("keydown", handleKey);
-    }, [handleKey]);
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current !== null) {
+            const touchEndX = e.changedTouches[0].clientX;
+            handleSwipe(touchStartX.current, touchEndX);
+            touchStartX.current = null;
+        }
+    };
 
     const handleDownload = async () => {
         const response = await fetch(current);
@@ -64,11 +48,12 @@ export default function ImageModal({ url, onClose, allImages = [], memoryName, o
         link.remove();
     };
 
-
     return (
         <div
             className="fixed inset-0 z-50 bg-black bg-opacity-80 flex flex-col items-center justify-center"
             onClick={onClose}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
         >
             {/* Zamknij */}
             <button

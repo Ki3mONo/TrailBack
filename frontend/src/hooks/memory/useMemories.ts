@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Memory } from "../types/types";
-import { fetchOwnAndSharedMemories } from "../services/memoriesService";
-import { supabase } from "../supabaseClient";
+import { Memory } from "../../types/types.ts";
+import { fetchOwnAndSharedMemories } from "../../services/memoriesService.ts";
+import { supabase } from "../../supabaseClient.ts";
 import { toast } from "react-toastify";
 
 export function useMemories(mode: "list" | "add") {

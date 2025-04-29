@@ -35,3 +35,53 @@ export type Memory = {
 };
 
 export type ViewMode = "list" | "add";
+
+export interface EditMemoryRequest {
+    title: string;
+    description?: string;
+}
+
+export interface ImageModalProps {
+    url: string;
+    onClose: () => void;
+    allImages?: string[];
+    memoryName: string;
+    onDelete?: (url: string) => void;
+}
+
+export interface FriendProfile {
+    id: string;
+    username?: string;
+    full_name?: string;
+    email?: string;
+    avatar_url?: string;
+}
+export interface ShareRecord {
+    shared_with: string;
+    shared_by: string;
+}
+
+export interface MemoryPayload {
+    title: string;
+    description: string;
+    lat: number;
+    lng: number;
+    created_by: string;
+    created_at: string;
+}
+
+export interface Photo {
+    id: string;
+    memory_id: string;
+    url: string;
+    uploaded_by: string;
+}
+
+export interface MemoryModalProps {
+    memory: Memory;
+    isShared: boolean;
+    onClose: () => void;
+    onDelete: () => void;
+    currentUserId: string;
+}
+

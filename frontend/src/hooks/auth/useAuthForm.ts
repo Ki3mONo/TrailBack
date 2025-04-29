@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../supabaseClient.ts";
 import { toast } from "react-toastify";
 
 export function useAuthForm() {

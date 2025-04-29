@@ -1,66 +1,22 @@
-import { useState } from "react";
-import { toast } from "react-toastify";
+import { usePhotoUploadModal } from "../../hooks/memory/usePhotoUploadModal.ts";
 
-type Props = {
+interface Props {
     memoryId: string;
     userId: string;
     onClose: () => void;
     onUploaded?: () => void;
-};
+}
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-export default function PhotoUploadModal({
-                                             memoryId,
-                                             userId,
-                                             onClose,
-                                             onUploaded,
-                                         }: Props) {
-    const [files, setFiles] = useState<File[]>([]);
-    const [isUploading, setIsUploading] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
-
-    const handleUpload = async () => {
-        if (files.length === 0) return toast.warn("Nie wybrano zdjęć.");
-        setIsUploading(true);
-
-        for (const file of files) {
-            const formData = new FormData();
-            formData.append("file", file);
-
-            try {
-                const res = await fetch(
-                    `${backendUrl}/memories/${memoryId}/upload-photo?user_id=${userId}`,
-                    {
-                        method: "POST",
-                        body: formData,
-                    }
-                );
-
-                if (!res.ok) throw new Error("Błąd uploadu");
-
-                toast.success(`Dodano zdjęcie: ${file.name}`);
-            } catch {
-                toast.error(`Błąd przy zdjęciu: ${file.name}`);
-            }
-        }
-
-        setFiles([]);
-        setIsUploading(false);
-        onClose();
-        onUploaded?.();
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const dropped = Array.from(e.dataTransfer.files).filter((f) =>
-            f.type.startsWith("image/")
-        );
-        if (dropped.length) {
-            setFiles((prev) => [...prev, ...dropped]);
-        }
-    };
+export default function PhotoUploadModal({ memoryId, userId, onClose, onUploaded }: Props) {
+    const {
+        files,
+        setFiles,
+        isUploading,
+        isDragging,
+        setIsDragging,
+        handleUpload,
+        handleDrop,
+    } = usePhotoUploadModal(memoryId, userId, onClose, onUploaded);
 
     return (
         <div
@@ -83,24 +39,12 @@ export default function PhotoUploadModal({
                         onClick={onClose}
                         className="text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-white transition"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-6 h-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                            />
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                {/* Zielony przycisk */}
                 <label className="btn bg-blue-600 text-white hover:bg-green-700 w-full text-center cursor-pointer justify-center">
                     Wybierz z urządzenia lub przeciągnij
                     <input
@@ -109,8 +53,9 @@ export default function PhotoUploadModal({
                         multiple
                         className="hidden"
                         onChange={(e) => {
-                            if (e.target.files?.length) {
-                                setFiles([...files, ...Array.from(e.target.files)]);
+                            const selectedFiles = e.target.files;
+                            if (selectedFiles && selectedFiles.length > 0) {
+                                setFiles(prev => [...prev, ...Array.from(selectedFiles)]);
                             }
                         }}
                     />
@@ -125,17 +70,11 @@ export default function PhotoUploadModal({
                                     key={idx}
                                     className="relative group aspect-[4/3] rounded shadow overflow-hidden cursor-pointer"
                                 >
-                                    <img
-                                        src={url}
-                                        alt={file.name}
-                                        className="w-full h-full object-cover"
-                                    />
+                                    <img src={url} alt={file.name} className="w-full h-full object-cover" />
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setFiles((prev) =>
-                                                prev.filter((_, i) => i !== idx)
-                                            );
+                                            setFiles(prev => prev.filter((_, i) => i !== idx));
                                         }}
                                         className="absolute top-1 right-1 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
                                     >
@@ -147,7 +86,6 @@ export default function PhotoUploadModal({
                     </div>
                 )}
 
-                {/* Dodaj wszystkie zdjęcia */}
                 <div className="flex justify-end">
                     <button
                         onClick={handleUpload}

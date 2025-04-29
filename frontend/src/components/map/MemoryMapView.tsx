@@ -7,10 +7,10 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import LocationSearch from "./LocationSearch.tsx";
 import MemoryForm from "../memories/MemoryForm.tsx";
 import MemoriesList from "../memories/MemoriesList.tsx";
-import MemoryTooltip from "../memories/MemoryTooltip.tsx";
+import MemoryTooltip from "./MemoryTooltip.tsx";
 import MemoryModal from "../memories/MemoryModal.tsx";
 
-import { useMemories } from "../../hooks/useMemories.ts";
+import { useMemories } from "../../hooks/memory/useMemories.ts";
 import { Memory, ViewMode } from "../../types/types.ts";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -263,23 +263,23 @@ export default function MemoryMapView({ darkMode }: MemoryMapViewProps) {
 
             {isMobileView && (
                 <>
-                    <button
-                        onClick={() => setIsLeftPanelOpen(prev => !prev)}
-                        className={`absolute top-1/2 z-20 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md flex items-center justify-center ${
-                            isLeftPanelOpen ? "left-[410px]" : "left-2"
-                        }`}
-                    >
-                        <i className={`bi ${isLeftPanelOpen ? "bi-chevron-left" : "bi-chevron-right"} text-xl`}></i>
-                    </button>
+                    {mode === "list" && (
+                        <button
+                            onClick={() => setIsLeftPanelOpen(prev => !prev)}
+                            className={`absolute top-1/2 -translate-y-1/2 left-2 z-20 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md`}
+                        >
+                            <i className={`bi ${isLeftPanelOpen ? "bi-chevron-left" : "bi-chevron-right"} text-xl`}></i>
+                        </button>
+                    )}
 
+                {mode === "add" && (
                     <button
                         onClick={() => setIsRightPanelOpen(prev => !prev)}
-                        className={`absolute top-1/2 z-20 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md flex items-center justify-center ${
-                            isRightPanelOpen ? "right-[490px]" : "right-2"
-                        }`}
+                        className={`absolute top-1/2 -translate-y-1/2 right-2 z-20 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md`}
                     >
                         <i className={`bi ${isRightPanelOpen ? "bi-chevron-right" : "bi-chevron-left"} text-xl`}></i>
                     </button>
+                )}
                 </>
             )}
 
