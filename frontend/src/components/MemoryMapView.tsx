@@ -2,36 +2,34 @@ import { useState, useRef, useEffect } from "react";
 import Map, { Marker, MapRef, ViewState, Source, Layer } from "react-map-gl";
 import * as mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
+
 import LocationSearch from "./LocationSearch";
 import MemoryForm from "./MemoryForm";
 import MemoriesList from "./MemoriesList";
-import { supabase } from "../supabaseClient";
-import { toast } from "react-toastify";
 import MemoryTooltip from "./MemoryTooltip";
 import MemoryModal from "./MemoryModal";
 
-type Memory = {
-    id: string;
-    title: string;
-    description?: string;
-    lat: number;
-    lng: number;
-    created_by: string;
-    created_at?: string;
-    isShared: boolean;
-};
+import { useMemories } from "../hooks/useMemories";
+import { Memory, ViewMode } from "../types/types";
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
-export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
-    const [mode, setMode] = useState<"list" | "add">("list");
-    const [memories, setMemories] = useState<Memory[]>([]);
-    const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
-    const [hoveredMemoryId, setHoveredMemoryId] = useState<string | null>(null);
+interface MemoryMapViewProps {
+    darkMode: boolean;
+}
+
+export default function MemoryMapView({ darkMode }: MemoryMapViewProps) {
+    const [mode, setMode] = useState<ViewMode>("list");
     const [position, setPosition] = useState<[number, number] | null>(null);
+    const [hoveredMemoryId, setHoveredMemoryId] = useState<string | null>(null);
+    const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
     const [showTrails, setShowTrails] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+    const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+    const [isMobileView, setIsMobileView] = useState(false);
+
+    const { memories, setMemories, currentUserId } = useMemories(mode);
 
     const [viewState, setViewState] = useState<ViewState>({
         latitude: 50.0647,
@@ -47,48 +45,32 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
         ? "mapbox://styles/mapbox/dark-v11"
         : "mapbox://styles/mapbox/outdoors-v12";
 
-    const fetchMemories = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return toast.error("Użytkownik niezalogowany");
+    const fitMapToMemories = () => {
+        if (mapRef.current && memories.length > 0) {
+            const lats = memories.map((m) => m.lat);
+            const lngs = memories.map((m) => m.lng);
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+            const minLng = Math.min(...lngs);
+            const maxLng = Math.max(...lngs);
 
-            setCurrentUserId(user.id); // 🛠️ Zapamiętaj userId
-
-            const own = await fetch(`${backendUrl}/memories?user_id=${user.id}`).then(res => res.json());
-            const shared = await fetch(`${backendUrl}/memories/shared?user_id=${user.id}`).then(res => res.json());
-
-            const combined = [...own, ...shared];
-            const unique = combined.filter((value, index, self) =>
-                index === self.findIndex((m) => m.id === value.id)
+            mapRef.current.fitBounds(
+                [
+                    [minLng, minLat],
+                    [maxLng, maxLat],
+                ],
+                {
+                    padding: {
+                        top: 80,
+                        bottom: 80,
+                        left: isMobileView ? 80 : 480,
+                        right: 80,
+                    },
+                    duration: 1000,
+                }
             );
-
-            const withFlags = unique.map((m) => ({
-                ...m,
-                isShared: m.created_by !== user.id,
-            }));
-
-            setMemories(withFlags);
-        } catch (err) {
-            toast.error("Błąd ładowania wspomnień");
-            console.error(err);
         }
     };
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setSelectedMemory(null);
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-
-        if (mode === "list") {
-            fetchMemories();
-        }
-
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [mode]);
 
     const handleMapClick = (e: mapboxgl.MapLayerMouseEvent) => {
         if (mode === "add") {
@@ -96,34 +78,56 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
         }
     };
 
+    const resetMapView = () => {
+        mapRef.current?.flyTo({
+            center: [19.945, 50.0647],
+            zoom: 6,
+            bearing: 0,
+            pitch: 0,
+            essential: true,
+        });
+    };
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 1200) {
+                setIsLeftPanelOpen(false);
+                setIsRightPanelOpen(false);
+                setIsMobileView(true);
+            } else {
+                setIsLeftPanelOpen(true);
+                setIsRightPanelOpen(true);
+                setIsMobileView(false);
+            }
+        };
+        window.addEventListener("resize", handleResize);
+        handleResize();
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    useEffect(() => {
+        if (memories.length > 0) {
+            fitMapToMemories();
+        }
+    }, [memories, isMobileView]);
+
     return (
-        <div className="relative w-full h-[calc(100vh-120px)]">
-            <div className="w-full h-full rounded-xl overflow-hidden">
+        <div className="relative w-full h-[calc(100vh-120px)] overflow-hidden">
+            <div className="absolute inset-0 z-0">
                 <Map
                     {...viewState}
                     onMove={(evt) => setViewState(evt.viewState)}
                     onClick={handleMapClick}
-                    mapboxAccessToken={mapboxToken}
+                    mapboxAccessToken={MAPBOX_TOKEN}
                     mapStyle={mapStyle}
                     ref={mapRef}
                     style={{ width: "100%", height: "100%" }}
                 >
-                    {/* Marker dodawania */}
                     {mode === "add" && position && (
                         <Marker latitude={position[0]} longitude={position[1]}>
-                            <div
-                                style={{
-                                    backgroundColor: "red",
-                                    borderRadius: "50%",
-                                    width: 20,
-                                    height: 20,
-                                    border: "2px solid white",
-                                }}
-                            />
+                            <div className="bg-red-500 w-5 h-5 rounded-full border-2 border-white" />
                         </Marker>
                     )}
-
-                    {/* Markery wspomnień */}
                     {mode === "list" &&
                         memories.map((memory) => (
                             <Marker
@@ -133,12 +137,12 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                                 onClick={(e) => {
                                     e.originalEvent.stopPropagation();
                                     setSelectedMemory(memory);
-                                    setViewState((prev) => ({
-                                        ...prev,
+                                    setViewState({
+                                        ...viewState,
                                         latitude: memory.lat,
                                         longitude: memory.lng,
                                         zoom: 10,
-                                    }));
+                                    });
                                 }}
                             >
                                 <div
@@ -150,8 +154,6 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                                 />
                             </Marker>
                         ))}
-
-                    {/* Tooltip */}
                     {hoveredMemoryId && mapRef.current && (() => {
                         const mem = memories.find((m) => m.id === hoveredMemoryId);
                         if (!mem) return null;
@@ -164,8 +166,6 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                             />
                         );
                     })()}
-
-                    {/* Szlaki */}
                     {showTrails && (
                         <>
                             <Source
@@ -180,7 +180,109 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                 </Map>
             </div>
 
-            {/* Modal wspomnienia */}
+            {(!isMobileView || (!isLeftPanelOpen && !isRightPanelOpen)) && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+                    <div className="flex bg-white dark:bg-gray-800 p-2 rounded-full shadow-md">
+                        <button
+                            onClick={() => setMode("list")}
+                            className={`px-4 py-1 rounded-full transition ${
+                                mode === "list" ? "bg-blue-500 text-white" : "text-gray-500"
+                            }`}
+                        >
+                            Moje wspomnienia
+                        </button>
+                        <button
+                            onClick={() => {
+                                setMode("add");
+                                setSelectedMemory(null);
+                            }}
+                            className={`px-4 py-1 rounded-full transition ${
+                                mode === "add" ? "bg-blue-500 text-white" : "text-gray-500"
+                            }`}
+                        >
+                            Dodaj wspomnienie
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {isLeftPanelOpen && (
+                <div className="absolute top-4 left-4 z-10 w-[90vw] max-w-[400px] space-y-4 overflow-hidden p-2">
+                    <LocationSearch
+                        mapboxToken={MAPBOX_TOKEN}
+                        onSelect={(lat, lng) => {
+                            setViewState((prev) => ({
+                                ...prev,
+                                latitude: lat,
+                                longitude: lng,
+                                zoom: 12,
+                            }));
+                            if (mode === "add") setPosition([lat, lng]);
+                        }}
+                    />
+                    {mode === "list" && (
+                        <div className="bg-white dark:bg-[#2a2a2d] p-4 rounded-xl shadow-lg max-h-[70vh] overflow-y-auto">
+                            <MemoriesList memories={memories} onSelect={(memory) => {
+                                setSelectedMemory(memory);
+                                setViewState({
+                                    ...viewState,
+                                    latitude: memory.lat,
+                                    longitude: memory.lng,
+                                    zoom: 10,
+                                });
+                            }} />
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {isRightPanelOpen && mode === "add" && (
+                <div className="absolute top-4 right-4 z-10 w-[90vw] max-w-[480px] overflow-hidden p-2">
+                    <div className="bg-white dark:bg-[#2a2a2d] p-4 rounded-xl shadow-lg max-h-[70vh] overflow-y-auto">
+                        <MemoryForm position={position} setPosition={setPosition} />
+                    </div>
+                </div>
+            )}
+
+            {(!isMobileView || (!isLeftPanelOpen && !isRightPanelOpen)) && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+                    <button
+                        onClick={() => setShowTrails((prev) => !prev)}
+                        className="bg-white dark:bg-gray-800 px-6 py-2 rounded-xl shadow-md text-sm font-medium"
+                    >
+                        {showTrails ? "Ukryj szlaki" : "Pokaż szlaki"}
+                    </button>
+                    <button
+                        onClick={resetMapView}
+                        className="bg-white dark:bg-gray-800 px-6 py-2 rounded-xl shadow-md text-sm font-medium"
+                    >
+                        Resetuj widok
+                    </button>
+                </div>
+            )}
+
+            {isMobileView && (
+                <>
+                    <button
+                        onClick={() => setIsLeftPanelOpen(prev => !prev)}
+                        className={`absolute top-1/2 z-20 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md flex items-center justify-center ${
+                            isLeftPanelOpen ? "left-[410px]" : "left-2"
+                        }`}
+                    >
+                        <i className={`bi ${isLeftPanelOpen ? "bi-chevron-left" : "bi-chevron-right"} text-xl`}></i>
+                    </button>
+
+                    <button
+                        onClick={() => setIsRightPanelOpen(prev => !prev)}
+                        className={`absolute top-1/2 z-20 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md flex items-center justify-center ${
+                            isRightPanelOpen ? "right-[490px]" : "right-2"
+                        }`}
+                    >
+                        <i className={`bi ${isRightPanelOpen ? "bi-chevron-right" : "bi-chevron-left"} text-xl`}></i>
+                    </button>
+                </>
+            )}
+
             {selectedMemory && currentUserId && (
                 <div
                     className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
@@ -193,110 +295,16 @@ export default function MemoryMapView({ darkMode }: { darkMode: boolean }) {
                         <MemoryModal
                             memory={selectedMemory}
                             isShared={selectedMemory.isShared}
-                            currentUserId={currentUserId} // ✅ tu bez błędu
+                            currentUserId={currentUserId}
                             onClose={() => setSelectedMemory(null)}
                             onDelete={() => {
-                                setMemories(memories.filter(m => m.id !== selectedMemory.id));
+                                setMemories(memories.filter((m) => m.id !== selectedMemory.id));
                                 setSelectedMemory(null);
                             }}
                         />
                     </div>
                 </div>
             )}
-
-            {/* Przełącznik trybu */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30">
-                <div className="bg-white dark:bg-gray-800 p-1 rounded-full shadow-md flex">
-                    <button
-                        onClick={() => setMode("list")}
-                        className={`px-4 py-1 rounded-full transition ${
-                            mode === "list" ? "bg-blue-500 text-white" : "text-gray-500"
-                        }`}
-                    >
-                        Moje wspomnienia
-                    </button>
-                    <button
-                        onClick={() => {
-                            setMode("add");
-                            setSelectedMemory(null);
-                        }}
-                        className={`px-4 py-1 rounded-full transition ${
-                            mode === "add" ? "bg-blue-500 text-white" : "text-gray-500"
-                        }`}
-                    >
-                        Dodaj wspomnienie
-                    </button>
-                </div>
-            </div>
-
-            {/* Szukajka */}
-            <div className="absolute top-4 left-4 z-30 w-[400px]">
-                <LocationSearch
-                    mapboxToken={mapboxToken}
-                    onSelect={(lat, lng) => {
-                        setViewState((prev) => ({
-                            ...prev,
-                            latitude: lat,
-                            longitude: lng,
-                            zoom: 12,
-                        }));
-                        if (mode === "add") {
-                            setPosition([lat, lng]);
-                        }
-                    }}
-                />
-            </div>
-
-            {/* Lista wspomnień */}
-            {mode === "list" && (
-                <div className="absolute top-[100px] left-4 z-20 w-[400px] bg-white dark:bg-[#2a2a2d] p-4 rounded-xl shadow-lg max-h-[70vh] overflow-y-auto">
-                    <MemoriesList
-                        memories={memories}
-                        onSelect={(memory) => {
-                            setViewState({
-                                ...viewState,
-                                latitude: memory.lat,
-                                longitude: memory.lng,
-                                zoom: 10,
-                            });
-                            setSelectedMemory(memory);
-                        }}
-                    />
-                </div>
-            )}
-
-            {/* Formularz */}
-            {mode === "add" && (
-                <div className="absolute top-4 right-4 z-20 w-[480px]">
-                    <div className="bg-white dark:bg-[#2a2a2d] p-4 rounded-xl shadow-lg max-h-[calc(100vh-120px-32px)] overflow-y-auto">
-                        <MemoryForm position={position} setPosition={setPosition} />
-                    </div>
-                </div>
-            )}
-
-            {/* Przycisk szlaków */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
-                <button
-                    className="bg-white dark:bg-gray-800 px-6 py-2 rounded-xl shadow-md text-sm font-medium"
-                    onClick={() => setShowTrails(prev => !prev)}
-                >
-                    {showTrails ? "Ukryj szlaki turystyczne" : "Pokaż szlaki turystyczne"}
-                </button>
-                <button
-                    className="bg-white dark:bg-gray-800 px-6 py-2 rounded-xl shadow-md text-sm font-medium ml-2"
-                    onClick={() => {
-                        mapRef.current?.flyTo({
-                            center: [19.945, 50.0647],
-                            zoom: 6,
-                            bearing: 0,
-                            pitch: 0,
-                            essential: true,
-                        });
-                    }}
-                >
-                    Resetuj widok mapy
-                </button>
-            </div>
         </div>
     );
 }

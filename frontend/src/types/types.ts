@@ -22,3 +22,16 @@ export interface FriendRequest {
     user_id: string;
     friend_id: string;
 }
+
+export type Memory = {
+    id: string;
+    title: string;
+    description?: string;
+    lat: number;
+    lng: number;
+    created_by: string;
+    created_at?: string;
+    isShared: boolean;
+};
+
+export type ViewMode = "list" | "add";
