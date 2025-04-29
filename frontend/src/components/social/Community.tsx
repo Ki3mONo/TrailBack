@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useSocial } from "../hooks/useSocial";
-import { socialService } from "../services/socialService";
-import PendingRequests from "./PendingRequests";
-import SentRequests from "./SentRequests";
-import AllUsers from "./AllUsers";
-import { AppUser } from "../types/types";
+import { useSocial } from "../../hooks/useSocial.ts";
+import { socialService } from "../../services/socialService.ts";
+import PendingRequests from "./PendingRequests.tsx";
+import SentRequests from "./SentRequests.tsx";
+import AllUsers from "./AllUsers.tsx";
+import { AppUser } from "../../types/types.ts";
 import { toast } from "react-toastify";
 
 interface CommunityProps {

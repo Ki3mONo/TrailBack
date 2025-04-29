@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
+import { toast } from "react-toastify";
 
 export function useAuthForm() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
     const [isLoginMode, setIsLoginMode] = useState(true);
 
     const handleSubmit = async () => {
-        setErrorMessage("");
-
         if (!email || !password) {
-            setErrorMessage("Email i hasło są wymagane.");
+            toast.error("Email i hasło są wymagane.");
             return;
         }
 
@@ -19,13 +17,18 @@ export function useAuthForm() {
             if (isLoginMode) {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
+                toast.success("Zalogowano pomyślnie!");
             } else {
                 const { error } = await supabase.auth.signUp({ email, password });
                 if (error) throw error;
+                toast.success("Konto utworzone. Sprawdź email!");
             }
-        } catch (error: any) {
-            setErrorMessage(error.message || "Wystąpił błąd.");
-            console.error(error);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                toast.error(error.message);
+            } else {
+                toast.error("Wystąpił nieznany błąd.");
+            }
         }
     };
 
@@ -36,7 +39,6 @@ export function useAuthForm() {
         setEmail,
         password,
         setPassword,
-        errorMessage,
         isLoginMode,
         toggleMode,
         handleSubmit,

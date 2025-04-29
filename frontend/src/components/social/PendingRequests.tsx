@@ -1,5 +1,5 @@
-import { AppUser, FriendRequest } from "../types/types";
-import UserItem from "./UserItem";
+import { AppUser, FriendRequest } from "../../types/types.ts";
+import UserItem from "./UserItem.tsx";
 
 interface PendingRequestsProps {
     incomingRequests: FriendRequest[];

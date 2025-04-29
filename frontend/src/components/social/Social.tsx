@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import Community from "./Community";
-import Profile from "./Profile";
-import FriendList from "./FriendList";
-import { AppUser } from "../types/types";
+import Community from "./Community.tsx";
+import Profile from "./Profile.tsx";
+import FriendList from "./FriendList.tsx";
+import { AppUser } from "../../types/types.ts";
 
 const Social = ({ user }: { user: SupabaseUser }) => {
     const [friends, setFriends] = useState<AppUser[]>([]);

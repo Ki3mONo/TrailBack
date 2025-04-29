@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { AppUser, Friendship } from "../types/types";
-import UserItem from "./UserItem";
-import ConfirmationModal from "./ConfirmationModal";
-import { socialService } from "../services/socialService";
+import { AppUser, Friendship } from "../../types/types.ts";
+import UserItem from "./UserItem.tsx";
+import ConfirmationModal from "../common/ConfirmationModal.tsx";
+import { socialService } from "../../services/socialService.ts";
 import { toast } from "react-toastify";
 
 interface AllUsersProps {

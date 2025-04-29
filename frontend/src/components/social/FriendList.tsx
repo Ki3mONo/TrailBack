@@ -1,6 +1,4 @@
-// /src/components/social/FriendList.tsx
-
-import { AppUser } from "../types/types";
+import { AppUser } from "../../types/types.ts";
 
 interface FriendListProps {
     friends: AppUser[];

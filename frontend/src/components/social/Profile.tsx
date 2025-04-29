@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import EditProfileModal from "./EditProfileModal";
+import EditProfileModal from "./EditProfileModal.tsx";
 import axios from "axios";
+import {UserProfile} from "../../types/types.ts";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
 const Profile = ({ user }: { user: SupabaseUser }) => {
-    const [profile, setProfile] = useState<any>(null);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
     const [showEdit, setShowEdit] = useState(false);
 
     const fetchProfile = async () => {

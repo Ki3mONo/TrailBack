@@ -4,10 +4,10 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { useAuth } from "./hooks/useAuth";
 import { useDarkMode } from "./hooks/useDarkMode";
-import Auth from "./components/Auth";
-import Social from "./components/Social";
+import Auth from "./components/auth/Auth.tsx";
+import Social from "./components/social/Social.tsx";
 import MemoryMapView from "./components/MemoryMapView";
-import Header from "./components/Header";
+import Header from "./components/common/Header.tsx";
 
 function App() {
     const { user, logout } = useAuth();

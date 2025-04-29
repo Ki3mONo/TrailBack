@@ -1,7 +1,5 @@
-// /src/components/social/UserItem.tsx
-
 import { useState } from "react";
-import { AppUser } from "../types/types";
+import { AppUser } from "../../types/types.ts";
 
 interface Props {
     user: AppUser;
