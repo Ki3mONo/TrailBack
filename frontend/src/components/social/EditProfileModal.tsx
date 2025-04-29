@@ -71,7 +71,6 @@ const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
 
     const handleSave = async () => {
         try {
-            // Aktualizacja danych tekstowych
             await axios.put(`${API_BASE}/profile`, form, {
                 params: { user_id: userId },
             });
@@ -79,7 +78,9 @@ const EditProfileModal = ({ userId, initial, onClose, onSaved }: Props) => {
             if (selectedFile && croppedAreaPixels && imageUrl) {
                 const croppedBlob = await getCroppedImg(imageUrl, croppedAreaPixels);
                 const fd = new FormData();
-                fd.append("file", croppedBlob, "avatar.jpg");
+
+                const uniqueSuffix = Date.now();
+                fd.append("file", croppedBlob, `avatar_${uniqueSuffix}.jpg`);
                 fd.append("user_id", userId);
 
                 await axios.post(`${API_BASE}/profile/avatar`, fd, {

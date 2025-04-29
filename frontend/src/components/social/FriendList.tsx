@@ -1,12 +1,7 @@
-interface Friend {
-    id: string;
-    full_name?: string;
-    username?: string;
-    avatar_url?: string;
-}
+import { AppUser } from "../../types/types.ts";
 
 interface FriendListProps {
-    friends: Friend[];
+    friends: AppUser[];
 }
 
 export default function FriendList({ friends }: FriendListProps) {
@@ -22,18 +17,12 @@ export default function FriendList({ friends }: FriendListProps) {
                         {friends.map((friend) => (
                             <li key={friend.id} className="flex items-center gap-3">
                                 <img
-                                    src={
-                                        friend.avatar_url?.trim()
-                                            ? friend.avatar_url
-                                            : "/placeholder-avatar.png"
-                                    }
+                                    src={friend.avatar_url?.trim() ? friend.avatar_url : "/placeholder-avatar.png"}
                                     alt={friend.full_name || "avatar"}
                                     className="w-9 h-9 rounded-full object-cover border dark:border-gray-600"
                                 />
                                 <div>
-                                    <p className="text-sm font-medium">
-                                        {friend.full_name || "Nieznajomy"}
-                                    </p>
+                                    <p className="text-sm font-medium">{friend.full_name || "Nieznajomy"}</p>
                                     <p className="text-xs text-gray-500">@{friend.username}</p>
                                 </div>
                             </li>
@@ -44,4 +33,3 @@ export default function FriendList({ friends }: FriendListProps) {
         </div>
     );
 }
-

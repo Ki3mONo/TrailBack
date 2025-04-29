@@ -1,45 +1,22 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import { useEffect } from "react";
+import { useAuthForm } from "../../hooks/useAuthForm.ts";
+import { useDarkMode } from "../../hooks/useDarkMode.ts";
 
 export default function Auth() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
-    const [isLoginMode, setIsLoginMode] = useState(true);
+    const { darkMode } = useDarkMode();
+    const {
+        email,
+        setEmail,
+        password,
+        setPassword,
+        errorMessage,
+        isLoginMode,
+        toggleMode,
+        handleSubmit,
+    } = useAuthForm();
 
-    // Sprawdzenie motywu przy montowaniu komponentu
     useEffect(() => {
-        const theme = localStorage.getItem("theme");
-        if (theme === "dark") {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
-        }
-    }, []);
-
-    const handleLogin = async () => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-        if (error) {
-            setErrorMessage(error.message);
-            console.error(error.message);
-        } else {
-            console.log("Zalogowano pomyślnie!");
-            // App.tsx przechwyci zmianę sesji i pokaże widok użytkownika
-        }
-    };
-
-    const handleRegister = async () => {
-        const { error } = await supabase.auth.signUp({ email, password });
-
-        if (error) {
-            setErrorMessage(error.message);
-            console.error(error.message);
-        } else {
-            console.log("Rejestracja pomyślna!");
-            // App.tsx przechwyci zmianę sesji
-        }
-    };
+    }, [darkMode]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4 transition-colors duration-300">
@@ -70,7 +47,7 @@ export default function Auth() {
                     )}
 
                     <button
-                        onClick={isLoginMode ? handleLogin : handleRegister}
+                        onClick={handleSubmit}
                         className="btn-primary w-full"
                     >
                         {isLoginMode ? "Zaloguj" : "Zarejestruj"}
@@ -79,7 +56,7 @@ export default function Auth() {
 
                 <div className="text-center pt-4 border-t text-sm">
                     <button
-                        onClick={() => setIsLoginMode(!isLoginMode)}
+                        onClick={toggleMode}
                         className="text-blue-500 hover:underline"
                     >
                         {isLoginMode
