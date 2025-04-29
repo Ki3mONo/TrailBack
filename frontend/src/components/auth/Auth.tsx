@@ -18,6 +18,12 @@ export default function Auth() {
     useEffect(() => {
     }, [darkMode]);
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            handleSubmit();
+        }
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4 transition-colors duration-300">
             <div className="card w-full max-w-md p-8 space-y-6">
@@ -30,6 +36,7 @@ export default function Auth() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        onKeyDown={handleKeyDown} // dodane
                         placeholder="Wprowadź email"
                         className="input"
                     />
@@ -38,6 +45,7 @@ export default function Auth() {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        onKeyDown={handleKeyDown} // dodane
                         placeholder="Wprowadź hasło"
                         className="input"
                     />

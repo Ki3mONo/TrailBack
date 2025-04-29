@@ -6,10 +6,13 @@ export function useAuthForm() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoginMode, setIsLoginMode] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null); // nullable
 
     const handleSubmit = async () => {
         if (!email || !password) {
-            toast.error("Email i hasło są wymagane.");
+            const message = "Email i hasło są wymagane.";
+            toast.error(message);
+            setErrorMessage(message);
             return;
         }
 
@@ -18,21 +21,28 @@ export function useAuthForm() {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 toast.success("Zalogowano pomyślnie!");
+                setErrorMessage(null);
             } else {
                 const { error } = await supabase.auth.signUp({ email, password });
                 if (error) throw error;
                 toast.success("Konto utworzone. Sprawdź email!");
+                setErrorMessage(null);
             }
         } catch (error: unknown) {
             if (error instanceof Error) {
                 toast.error(error.message);
+                setErrorMessage(error.message);
             } else {
                 toast.error("Wystąpił nieznany błąd.");
+                setErrorMessage("Wystąpił nieznany błąd.");
             }
         }
     };
 
-    const toggleMode = () => setIsLoginMode((prev) => !prev);
+    const toggleMode = () => {
+        setIsLoginMode((prev) => !prev);
+        setErrorMessage(null);
+    };
 
     return {
         email,
@@ -42,5 +52,6 @@ export function useAuthForm() {
         isLoginMode,
         toggleMode,
         handleSubmit,
+        errorMessage,
     };
 }
