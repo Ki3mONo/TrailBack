@@ -6,7 +6,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useDarkMode } from "./hooks/useDarkMode";
 import Auth from "./components/auth/Auth.tsx";
 import Social from "./components/social/Social.tsx";
-import MemoryMapView from "./components/MemoryMapView";
+import MemoryMapView from "./components/map/MemoryMapView.tsx";
 import Header from "./components/common/Header.tsx";
 
 function App() {

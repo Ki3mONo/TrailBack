@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import ImageModal from "./ImageModal";
-import ShareMemoryModal from "./ShareMemoryModal";
-import EditMemoryModal from "./EditMemoryModal";
-import MemorySharingInfo from "./MemorySharingInfo";
-import PhotoUploadModal from "./PhotoUploadModal";
+import ImageModal from "./ImageModal.tsx";
+import ShareMemoryModal from "./ShareMemoryModal.tsx";
+import EditMemoryModal from "./EditMemoryModal.tsx";
+import MemorySharingInfo from "./MemorySharingInfo.tsx";
+import PhotoUploadModal from "./PhotoUploadModal.tsx";
 import { toast } from "react-toastify";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;

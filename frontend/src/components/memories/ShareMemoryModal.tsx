@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../supabaseClient.ts";
 import { toast } from "react-toastify";
-import ConfirmationModal from "./common/ConfirmationModal.tsx";
+import ConfirmationModal from "../common/ConfirmationModal.tsx";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
