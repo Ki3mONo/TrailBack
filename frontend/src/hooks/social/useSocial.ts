@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { socialService } from "../services/socialService";
-import { AppUser, Friendship } from "../types/types";
+import { socialService } from "../../services/socialService.ts";
+import { AppUser, Friendship } from "../../types/types.ts";
 import { toast } from "react-toastify";
 
 export function useSocial(userId: string) {
