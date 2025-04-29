@@ -1,56 +1,7 @@
-import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
-
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-interface FriendProfile {
-    id: string;
-    username?: string;
-    full_name?: string;
-    email?: string;
-    avatar_url?: string;
-}
-
-interface ShareRecord {
-    shared_with: string;
-    shared_by: string;
-}
+import { useMemorySharingInfo } from "../../hooks/memory/useMemorySharingInfo.ts";
 
 export default function MemorySharingInfo({ memoryId, ownerId }: { memoryId: string; ownerId: string }) {
-    const [owner, setOwner] = useState<FriendProfile | null>(null);
-    const [sharedWith, setSharedWith] = useState<FriendProfile[]>([]);
-
-    useEffect(() => {
-        const loadSharingData = async () => {
-            try {
-                const ownerRes = await fetch(`${backendUrl}/profile?user_id=${ownerId}`);
-                const ownerData: FriendProfile = await ownerRes.json();
-                setOwner(ownerData);
-
-                const sharesRes = await fetch(`${backendUrl}/memories/${memoryId}/shares`);
-                const shares: ShareRecord[] = await sharesRes.json();
-
-                const onlyOwnerShares = shares
-                    .filter(s => s.shared_by === ownerId)
-                    .map(s => s.shared_with);
-
-                if (onlyOwnerShares.length === 0) {
-                    setSharedWith([]);
-                    return;
-                }
-
-                const profilesRes = await fetch(`${backendUrl}/users?current_user=${ownerId}`);
-                const allProfiles: FriendProfile[] = await profilesRes.json();
-                const filtered = allProfiles.filter(u => onlyOwnerShares.includes(u.id));
-                setSharedWith(filtered);
-            } catch (err) {
-                console.error("Błąd pobierania danych do MemorySharingInfo", err);
-                toast.error("Nie udało się pobrać informacji o udostępnieniach");
-            }
-        };
-
-        loadSharingData();
-    }, [memoryId, ownerId]);
+    const { owner, sharedWith } = useMemorySharingInfo(memoryId, ownerId);
 
     return (
         <div className="h-[400px] bg-[var(--card)] p-4 rounded-xl shadow flex flex-col space-y-4">

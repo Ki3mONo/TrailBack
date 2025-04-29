@@ -7,10 +7,10 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import LocationSearch from "./LocationSearch.tsx";
 import MemoryForm from "../memories/MemoryForm.tsx";
 import MemoriesList from "../memories/MemoriesList.tsx";
-import MemoryTooltip from "../memories/MemoryTooltip.tsx";
+import MemoryTooltip from "./MemoryTooltip.tsx";
 import MemoryModal from "../memories/MemoryModal.tsx";
 
-import { useMemories } from "../../hooks/useMemories.ts";
+import { useMemories } from "../../hooks/memory/useMemories.ts";
 import { Memory, ViewMode } from "../../types/types.ts";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;

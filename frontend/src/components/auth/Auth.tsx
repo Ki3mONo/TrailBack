@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useAuthForm } from "../../hooks/useAuthForm.ts";
-import { useDarkMode } from "../../hooks/useDarkMode.ts";
+import { useAuthForm } from "../../hooks/auth/useAuthForm.ts";
+import { useDarkMode } from "../../hooks/app/useDarkMode.ts";
 
 export default function Auth() {
     const { darkMode } = useDarkMode();

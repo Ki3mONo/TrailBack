@@ -1,116 +1,36 @@
-import { useEffect, useState } from "react";
-import ImageModal from "./ImageModal.tsx";
-import ShareMemoryModal from "./ShareMemoryModal.tsx";
-import EditMemoryModal from "./EditMemoryModal.tsx";
-import MemorySharingInfo from "./MemorySharingInfo.tsx";
-import PhotoUploadModal from "./PhotoUploadModal.tsx";
+import { useMemoryModal } from "../../hooks/memory/useMemoryModal.ts";
+import { MemoryModalProps } from "../../types/types";
+import ImageModal from "./ImageModal";
+import ShareMemoryModal from "./ShareMemoryModal";
+import EditMemoryModal from "./EditMemoryModal";
+import MemorySharingInfo from "./MemorySharingInfo";
+import PhotoUploadModal from "./PhotoUploadModal";
+import ConfirmationModal from "../common/ConfirmationModal";
 import { toast } from "react-toastify";
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-type Memory = {
-    id: string;
-    title: string;
-    description?: string;
-    lat: number;
-    lng: number;
-    created_by: string;
-};
-
-type Photo = {
-    id: string;
-    memory_id: string;
-    url: string;
-    uploaded_by: string;
-};
-
-type Props = {
-    memory: Memory;
-    isShared: boolean;
-    onClose: () => void;
-    onDelete: () => void;
-    currentUserId: string; // 🧠 TU jest poprawka
-};
-
-export default function MemoryModal({
-                                        memory,
-                                        isShared,
-                                        onClose,
-                                        onDelete,
-                                        currentUserId,
-                                    }: Props) {
-    const [photos, setPhotos] = useState<Photo[]>([]);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [shareOpen, setShareOpen] = useState(false);
-    const [editOpen, setEditOpen] = useState(false);
-    const [photoModalOpen, setPhotoModalOpen] = useState(false);
-
-    const fetchPhotos = async () => {
-        try {
-            const res = await fetch(`${backendUrl}/photos?memory_id=${memory.id}`);
-            const data = await res.json();
-            setPhotos(Array.isArray(data) ? data : []);
-        } catch {
-            toast.error("Błąd ładowania zdjęć");
-        }
-    };
-
-    useEffect(() => {
-        fetchPhotos();
-    }, [memory.id]);
-
-    const deletePhoto = async (photoId: string) => {
-        try {
-            const res = await fetch(
-                `${backendUrl}/photos/${photoId}?user_id=${currentUserId}`,
-                { method: "DELETE" }
-            );
-
-            if (!res.ok) {
-                if (res.status === 403) {
-                    toast.error("Możesz usuwać tylko swoje zdjęcia.");
-                } else {
-                    toast.error("Błąd usuwania zdjęcia.");
-                }
-                return;
-            }
-
-            setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-            toast.success("Usunięto zdjęcie");
-        } catch (error) {
-            console.error(error);
-            toast.error("Błąd sieci podczas usuwania zdjęcia.");
-        }
-    };
-
-    const deleteMemory = async () => {
-        if (!confirm("Na pewno chcesz usunąć wspomnienie?")) return;
-
-        try {
-            const res = await fetch(`${backendUrl}/memories/${memory.id}?user_id=${currentUserId}`, {
-                method: "DELETE",
-            });
-
-            if (!res.ok) {
-                const errorData = await res.json();
-                if (res.status === 403 && errorData.detail) {
-                    toast.error(errorData.detail);
-                } else {
-                    toast.error("Błąd usuwania wspomnienia");
-                }
-                return;
-            }
-
-            toast.success("Usunięto wspomnienie");
-            onClose();
-            onDelete();
-        } catch {
-            toast.error("Błąd sieci podczas usuwania wspomnienia");
-        }
-    };
+export default function MemoryModal({ memory, isShared, onClose, onDelete, currentUserId }: MemoryModalProps) {
+    const {
+        photos,
+        previewUrl,
+        setPreviewUrl,
+        shareOpen,
+        setShareOpen,
+        editOpen,
+        setEditOpen,
+        photoModalOpen,
+        setPhotoModalOpen,
+        fetchPhotos,
+        deletePhoto,
+        deleteMemory,
+        confirmDeleteMemory,
+        setConfirmDeleteMemory,
+        confirmDeletePhotoId,
+        setConfirmDeletePhotoId,
+    } = useMemoryModal(memory.id, currentUserId);
 
     return (
         <div className="p-6 space-y-6">
+            {/* Modale */}
             {previewUrl && (
                 <ImageModal
                     url={previewUrl}
@@ -119,7 +39,7 @@ export default function MemoryModal({
                     memoryName={memory.title}
                     onDelete={(url) => {
                         const photo = photos.find((p) => p.url === url);
-                        if (photo) deletePhoto(photo.id);
+                        if (photo) setConfirmDeletePhotoId(photo.id);
                         setPreviewUrl(null);
                     }}
                 />
@@ -156,7 +76,33 @@ export default function MemoryModal({
                 />
             )}
 
-            {/* Nagłówek */}
+            {/* Confirmation modale */}
+            {confirmDeletePhotoId && (
+                <ConfirmationModal
+                    message="Czy na pewno chcesz usunąć to zdjęcie?"
+                    onConfirm={async () => {
+                        await deletePhoto(confirmDeletePhotoId);
+                        setConfirmDeletePhotoId(null);
+                    }}
+                    onCancel={() => setConfirmDeletePhotoId(null)}
+                />
+            )}
+
+            {confirmDeleteMemory && (
+                <ConfirmationModal
+                    message="Czy na pewno chcesz usunąć wspomnienie?"
+                    onConfirm={async () => {
+                        await deleteMemory(() => {
+                            onClose();
+                            onDelete();
+                        });
+                        setConfirmDeleteMemory(false);
+                    }}
+                    onCancel={() => setConfirmDeleteMemory(false)}
+                />
+            )}
+
+            {/* Treść */}
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">{memory.title}</h2>
                 {isShared && (
@@ -184,14 +130,12 @@ export default function MemoryModal({
                                     src={`${photo.url}?width=300&quality=30`}
                                     alt="Zdjęcie"
                                     className="w-full h-full object-cover blur-sm opacity-0 transition duration-500"
-                                    onLoad={(e) =>
-                                        e.currentTarget.classList.remove("blur-sm", "opacity-0")
-                                    }
+                                    onLoad={(e) => e.currentTarget.classList.remove("blur-sm", "opacity-0")}
                                 />
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        deletePhoto(photo.id);
+                                        setConfirmDeletePhotoId(photo.id);
                                     }}
                                     className="absolute top-1 right-1 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
                                 >
@@ -235,7 +179,10 @@ export default function MemoryModal({
                         Udostępnij
                     </button>
 
-                    <button onClick={deleteMemory} className="btn bg-red-600 text-white">
+                    <button
+                        onClick={() => setConfirmDeleteMemory(true)}
+                        className="btn bg-red-600 text-white"
+                    >
                         Usuń
                     </button>
                 </div>

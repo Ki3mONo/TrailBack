@@ -2,8 +2,8 @@ import { useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { useAuth } from "./hooks/useAuth";
-import { useDarkMode } from "./hooks/useDarkMode";
+import { useAuth } from "./hooks/auth/useAuth.ts";
+import { useDarkMode } from "./hooks/app/useDarkMode.ts";
 import Auth from "./components/auth/Auth.tsx";
 import Social from "./components/social/Social.tsx";
 import MemoryMapView from "./components/map/MemoryMapView.tsx";

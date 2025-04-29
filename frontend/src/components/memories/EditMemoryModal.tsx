@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { toast } from "react-toastify";
+import { useEditMemory } from "../../hooks/memory/useEditMemory.ts";
 
 type Props = {
     memoryId: string;
@@ -10,8 +9,6 @@ type Props = {
     onSave: (title: string, description?: string) => void;
 };
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
 export default function EditMemoryModal({
                                             memoryId,
                                             initialTitle,
@@ -20,34 +17,14 @@ export default function EditMemoryModal({
                                             onClose,
                                             onSave,
                                         }: Props) {
-    const [title, setTitle] = useState(initialTitle);
-    const [description, setDescription] = useState(initialDescription);
-    const [loading, setLoading] = useState(false);
-
-    const handleSubmit = async () => {
-        if (!title.trim()) {
-            toast.error("Tytuł nie może być pusty");
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const res = await fetch(`${backendUrl}/memories/${memoryId}/edit?user_id=${userId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title, description }),
-            });
-
-            if (!res.ok) throw new Error();
-            toast.success("Wspomnienie zaktualizowane");
-            onSave(title, description);
-            onClose();
-        } catch {
-            toast.error("Błąd zapisu zmian");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const {
+        title,
+        setTitle,
+        description,
+        setDescription,
+        loading,
+        handleSubmit,
+    } = useEditMemory(memoryId, userId, onSave, onClose, initialTitle, initialDescription);
 
     return (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
