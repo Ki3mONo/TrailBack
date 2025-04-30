@@ -57,8 +57,7 @@ TrailBack wykorzystuje następujący system uprawnień:
   - Udostępnianie znajomym i cofanie udostępnienia
 
 - **Znajomi z udostępnieniem**:
-  - Przeglądanie wspomnienia i zdjęć
-  - Edytowanie opisu i tytułu
+  - Przeglądanie opisu wspomnienia i zdjęć
   - Dodawanie własnych zdjęć
   - Usuwanie własnych zdjęć
 
